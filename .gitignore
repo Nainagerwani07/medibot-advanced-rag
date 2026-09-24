@@ -216,3 +216,15 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# --- MediBot project ---
+# Dataset is provided by the bootcamp; not redistributed (see README)
+data/
+*.db
+# Qdrant docker volume
+qdrant_storage/
+# Next.js
+node_modules/
+.next/
+# Model caches
+.cache/
