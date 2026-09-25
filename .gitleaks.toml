@@ -1,0 +1,11 @@
+# Extend gitleaks' built-in rules with a Groq-specific one.
+# The default `generic-api-key` rule only fires when a keyword like API_KEY sits next to the value,
+# so a bare key (e.g. Groq("gsk_...")) slipped through in testing.
+[extend]
+useDefault = true
+
+[[rules]]
+id = "groq-api-key"
+description = "Groq API key"
+regex = '''\bgsk_[A-Za-z0-9]{40,}\b'''
+keywords = ["gsk_"]

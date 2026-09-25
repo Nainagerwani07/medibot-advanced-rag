@@ -18,11 +18,14 @@ Hybrid RAG (dense + BM25 in Qdrant) → cross-encoder rerank → Groq LLM, plus 
 2. **Never write code without first explaining what we're about to build, why it's needed, and which requirement it serves.**
    Wait for the user's go-ahead when a step introduces a new concept.
 3. Work **step by step**, about 2 hours per session, following the Day plan in `docs/ROADMAP.md`. Don't jump ahead to later days.
-4. Prefer showing real output (print chunks, log scores, inspect payloads) over explaining in the abstract.
-5. Retrieval goes through **qdrant-client directly**, not LangChain's vector-store wrapper (D3).
-6. CPU-only machine: pick CPU-friendly models; Docling OCR off (D4).
-7. Public repo: never commit secrets, `.env`, or the dataset. Commit only when the user asks.
-8. **Git workflow: all work happens on feature branches, never directly on `main`.** Only the initial docs setup
+4. **Checkpoint format.** After finishing a block of work, do NOT end with questions or option menus. End with a
+   **summary**: what is finished so far, and the core reason behind each piece. Then stop and wait for the user to
+   review and give the next command. Don't start the next step on your own.
+5. Prefer showing real output (print chunks, log scores, inspect payloads) over explaining in the abstract.
+6. Retrieval goes through **qdrant-client directly**, not LangChain's vector-store wrapper (D3).
+7. CPU-only machine: pick CPU-friendly models; Docling OCR off (D4).
+8. Public repo: never commit secrets, `.env`, or the dataset. Commit only when the user asks.
+9. **Git workflow: all work happens on feature branches, never directly on `main`.** Only the initial docs setup
    (Day 0) was pushed to `main`. Branch naming: `feature/day-<N>-<short-topic>` (e.g. `feature/day-1-env-setup`);
    use `fix/<topic>` or `docs/<topic>` for small non-Day changes. Merge to `main` via PR.
 
@@ -38,14 +41,23 @@ Hybrid RAG (dense + BM25 in Qdrant) → cross-encoder rerank → Groq LLM, plus 
 4. Suggest a commit message (don't commit unless asked).
 
 ## Current state
-- **Last completed:** Day 0 — requirements, architecture, docs.
-- **Next:** Day 1 — environment setup (Python venv, deps, Qdrant via docker-compose, Groq key in `.env`), unzip the dataset
-  into `data/`, look at the PDFs and the `mediassist.db` schema.
-- **Code written so far:** none.
+- **Last completed:** Day 1 — env setup, quality tooling, Qdrant, Groq check, data exploration
+  (PR from `feature/day-1-env-setup`; check whether it's merged before branching for Day 2).
+- **Next:** Day 2 — Docling parsing (`uv add docling` then; OCR off). Inspect structure of all 12 files.
+- **Code written so far:** tooling only (backend/pyproject.toml, pre-commit, .claude hooks/skills, docker-compose).
+  No application code yet; `backend/src/medibot/__init__.py` is empty.
+- **Open items:** see the Day 1 entry in `docs/ROADMAP.md`.
 
 ## Environment facts
 - Dataset zip (outside repo): `/home/naina/Downloads/codebasics/29-aug-session-5/Medibot_Assignment_Resources/mediassist_data.zip`
   → contains `billing/ clinical/ equipment/ general/ nursing/ db/mediassist.db`
 - Original brief: same folder, `MediBot_Assignment_Instructions.pdf` / `Medibot_Assignment_Instruction.md`
 - Reference notebook from the bootcamp (uses LangChain; for reference only): `/home/naina/Downloads/codebasics/29-aug-session-5/Session_5_Resource_1/advanced__RAG.ipynb`
-- Platform: Linux, CPU only, Docker available.
+- Unzipped dataset (gitignored): `data/mediassist_data/{general,clinical,nursing,billing,equipment,db}/`
+- Qdrant: `docker compose up -d` → http://localhost:6333 (dashboard at /dashboard)
+- Groq models on our key: `openai/gpt-oss-120b`, `openai/gpt-oss-20b` (no Llama 70B). gpt-oss reasons internally,
+  so hidden tokens count toward `max_tokens`; keep it generous or answers come back empty.
+- Never read or print `.env`. Load it into the environment only (`set -a; . ./.env; set +a`).
+- gh: remote uses SSH alias `github-personal`; gh needs `GH_REPO=Nainagerwani07/medibot-advanced-rag`
+  (set in `.claude/settings.json`) and explicit `--head <branch>`.
+- Platform: Linux, CPU only (12 cores, 23 GB RAM), Docker available, system Python 3.10 (uv provides 3.12), no `jq`.

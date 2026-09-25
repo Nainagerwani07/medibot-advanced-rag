@@ -47,7 +47,7 @@ Details: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 | admin | all (+ SQL RAG) |
 
 ## Tech stack
-Docling · FastEmbed (bge-small + BM25) · Qdrant · sentence-transformers cross-encoder · Groq · SQLite · FastAPI · Next.js
+Docling · FastEmbed (bge-small + BM25) · Qdrant · sentence-transformers cross-encoder · Groq (gpt-oss) · SQLite · FastAPI · Next.js · uv · ruff · pre-commit/gitleaks
 
 ## Documentation
 | Doc | Contents |
@@ -58,7 +58,29 @@ Docling · FastEmbed (bge-small + BM25) · Qdrant · sentence-transformers cross
 | [docs/ROADMAP.md](docs/ROADMAP.md) | Day-by-day plan and session log |
 
 ## Setup
-_Coming on Day 1._
+
+**Prerequisites:** [uv](https://docs.astral.sh/uv/), Docker with Compose v2, [pre-commit](https://pre-commit.com/),
+and a [Groq API key](https://console.groq.com/keys). CPU only; no GPU needed.
+
+```bash
+# 1. Python environment (uv installs Python 3.12 if missing)
+cd backend && uv sync && cd ..
+
+# 2. Git hooks (secret scanning, lint, main-branch guard)
+pre-commit install
+
+# 3. Qdrant vector DB (http://localhost:6333/dashboard)
+docker compose up -d
+
+# 4. Configuration
+cp .env.example .env        # then put your GROQ_API_KEY in .env (never commit it)
+
+# 5. Dataset (provided by the Codebasics bootcamp, not redistributed here)
+mkdir -p data && unzip mediassist_data.zip -d data/
+# expected: data/mediassist_data/{general,clinical,nursing,billing,equipment,db}/
+```
+
+Ingestion, backend and frontend run steps will be added as they're built (see [ROADMAP](docs/ROADMAP.md)).
 
 ## Adversarial RBAC tests
 _Coming on Day 9._

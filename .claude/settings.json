@@ -1,0 +1,33 @@
+{
+  "env": {
+    "GH_REPO": "Nainagerwani07/medibot-advanced-rag"
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/block_main_git.py\"",
+            "timeout": 10,
+            "statusMessage": "Checking branch rule..."
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/ruff_on_edit.py\"",
+            "timeout": 60,
+            "statusMessage": "Running ruff..."
+          }
+        ]
+      }
+    ]
+  }
+}
