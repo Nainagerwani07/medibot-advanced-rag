@@ -1,0 +1,7 @@
+# Repo-root ruff config so pre-commit (which runs from the root) uses the same rules as backend/.
+extend = "backend/pyproject.toml"
+
+[lint]
+# Claude hook scripts are developer tools that run fixed git/uv commands (no shell, no user input),
+# so bandit's subprocess warnings (S603/S607) don't apply there. They stay on for application code.
+extend-per-file-ignores = { ".claude/hooks/**" = ["S603", "S607"] }

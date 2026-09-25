@@ -4,7 +4,7 @@
 
 Two separate pipelines:
 
-- **Offline ingestion**, run once with `scripts/ingest.py`: documents → structured chunks → dense + sparse vectors → Qdrant.
+- **Offline ingestion**, run once with `backend/scripts/ingest.py`: documents → structured chunks → dense + sparse vectors → Qdrant.
 - **Online query**: the API that handles login and chat requests.
 
 They are kept apart because Docling and the embedding models are slow to load. The API should start quickly and only ever read from the index.
@@ -46,7 +46,7 @@ flowchart TD
 
 ## 2. Components
 
-### 2.1 Ingestion (`backend/app/ingestion/`)
+### 2.1 Ingestion (`backend/src/medibot/ingestion/`)
 | Step | Tool | Why |
 |---|---|---|
 | Parse | Docling `DocumentConverter` | Layout and table models find headings, tables and reading order. Plain text extraction flattens tables, so a dosage table ends up as a list of unrelated numbers. |
@@ -63,7 +63,7 @@ CPU note: the PDFs are digital (not scanned), so we can **turn off OCR** in Docl
 - **Payload index** on `access_roles` (keyword) and `collection`, so filtering is fast and happens inside the search.
 - Why one collection instead of five: RBAC then comes from a *metadata filter*, which is what the brief asks for. It also lets admin search across everything in one query.
 
-### 2.3 Hybrid retrieval (`backend/app/retrieval/`), using qdrant-client directly
+### 2.3 Hybrid retrieval (`backend/src/medibot/retrieval/`), using qdrant-client directly
 One `query_points` call:
 ```
 prefetch = [ dense search (limit 20, filter), sparse search (limit 20, filter) ]
@@ -78,19 +78,19 @@ limit    = 10
 - `cross-encoder/ms-marco-MiniLM-L-6-v2` (default: small and fast on CPU). `BAAI/bge-reranker-base` can be compared in the eval.
 - A bi-encoder embeds the query and the chunk *separately*. A cross-encoder reads them *together*, so it's more accurate but too slow to run over the whole index. That's why we use it only on the top 10 to get the top 3.
 
-### 2.5 SQL RAG (`backend/app/sql_rag/`)
+### 2.5 SQL RAG (`backend/src/medibot/sql_rag/`)
 `sql_rag_chain(question) -> str`:
 1. **Generate**: the LLM gets the schema (and a few sample rows) and writes a SQLite SELECT.
 2. **Clean**: strip code fences, `SQLQuery:` prefixes and extra prose; keep one statement; reject anything that isn't SELECT or WITH.
 3. **Execute and answer**: run it on a **read-only** connection (`file:mediassist.db?mode=ro`) with a row limit, then the LLM phrases the result.
 
-### 2.6 Router (`backend/app/routing/`)
+### 2.6 Router (`backend/src/medibot/routing/`)
 The LLM returns JSON: `{"type": "analytical" | "document", "target_collections": [...]}`.
 - `type` picks SQL RAG or Hybrid RAG.
 - `target_collections` is only used to **write a clear refusal message** ("you do not have access to billing documents"). **It is not the security boundary.** Even if the router is fooled, the Qdrant filter still blocks the data.
 - If the LLM output can't be parsed, a keyword heuristic is used instead.
 
-### 2.7 API & auth (`backend/app/api/`)
+### 2.7 API & auth (`backend/src/medibot/api/`)
 - FastAPI, with demo users in a config file (bcrypt-hashed passwords) and a JWT holding `sub` and `role`.
 - `/chat` reads the role from the token through a dependency. If the request body includes a role, it is ignored or checked against the token's role.
 
@@ -113,39 +113,46 @@ The principle: **the LLM can't leak what it never saw.** Prompt injection can ch
 
 | Concern | Choice |
 |---|---|
-| Language | Python 3.11+, TypeScript |
+| Language | Python 3.12 (managed by uv), TypeScript |
 | Parsing / chunking | Docling + HybridChunker |
 | Dense embeddings | `BAAI/bge-small-en-v1.5` via FastEmbed (ONNX, CPU friendly) |
 | Sparse embeddings | FastEmbed `Qdrant/bm25` |
 | Vector DB | Qdrant (Docker), `qdrant-client` |
 | Reranker | `cross-encoder/ms-marco-MiniLM-L-6-v2` (sentence-transformers) |
-| LLM | Groq API (Llama 3.x 70B class) |
+| LLM | Groq API: `openai/gpt-oss-120b` (answers) / `openai/gpt-oss-20b` (router, NL→SQL), final pick Day 7 (D1) |
 | SQL | SQLite (`mediassist.db`) |
 | Backend | FastAPI, Pydantic, PyJWT |
 | Frontend | Next.js |
-| Tests | pytest |
+| Tests / quality | pytest, ruff, pre-commit + gitleaks (D12) |
 
-## 5. Planned repo layout
+## 5. Repo layout
+
+Items marked *(planned)* don't exist yet.
 
 ```
 medibot-advanced-rag/
 ├── CLAUDE.md                 # context for Claude Code sessions
 ├── README.md
 ├── docs/                     # requirements, architecture, roadmap, decisions
-├── docker-compose.yml        # Qdrant
-├── backend/
-│   ├── app/
-│   │   ├── config.py         # settings from .env
-│   │   ├── rbac.py           # single source of truth: role → collections
-│   │   ├── ingestion/        # docling parse, chunk, metadata
-│   │   ├── retrieval/        # qdrant hybrid search, reranker
-│   │   ├── sql_rag/          # sql_rag_chain
-│   │   ├── routing/          # analytical vs document, target collection
-│   │   ├── generation/       # prompts, LLM client, citations
-│   │   └── api/              # FastAPI app, auth, endpoints
-│   ├── scripts/ingest.py
-│   ├── eval/                 # questions.json, compare.py
+├── docker-compose.yml        # Qdrant (pinned, localhost-only)
+├── .env.example              # required env vars (real values in gitignored .env)
+├── .pre-commit-config.yaml   # git hooks: gitleaks, ruff, main-branch guard
+├── .gitleaks.toml            # adds a Groq-key rule to gitleaks defaults
+├── ruff.toml                 # root ruff config: extends backend/pyproject.toml (one rule set everywhere)
+├── .claude/                  # Claude Code hooks + /start-session, /end-session skills
+├── backend/                  # uv project (pyproject.toml, uv.lock)
+│   ├── src/medibot/
+│   │   ├── config.py         # settings from .env                        (planned)
+│   │   ├── rbac.py           # single source of truth: role → collections (planned)
+│   │   ├── ingestion/        # docling parse, chunk, metadata            (planned)
+│   │   ├── retrieval/        # qdrant hybrid search, reranker            (planned)
+│   │   ├── sql_rag/          # sql_rag_chain                             (planned)
+│   │   ├── routing/          # analytical vs document, target collection (planned)
+│   │   ├── generation/       # prompts, LLM client, citations            (planned)
+│   │   └── api/              # FastAPI app, auth, endpoints              (planned)
+│   ├── scripts/ingest.py     #                                           (planned)
+│   ├── eval/                 # questions.json, compare.py                (planned)
 │   └── tests/                # RBAC adversarial tests, unit tests
-├── frontend/                 # Next.js
+├── frontend/                 # Next.js                                   (planned)
 └── data/                     # dataset (gitignored), see README for how to get it
 ```

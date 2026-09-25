@@ -1,0 +1,15 @@
+# Local infrastructure for MediBot. Start: `docker compose up -d`   Stop: `docker compose down`
+services:
+  qdrant:
+    image: qdrant/qdrant:v1.19.1 # pinned: qdrant-client must stay compatible with the server
+    container_name: medibot-qdrant
+    ports:
+      # bound to localhost only: no API key is set, so the index must not be reachable from the network
+      - "127.0.0.1:6333:6333" # REST API + web dashboard (http://localhost:6333/dashboard)
+      - "127.0.0.1:6334:6334" # gRPC
+    volumes:
+      - qdrant_storage:/qdrant/storage # index survives container restarts
+    restart: unless-stopped
+
+volumes:
+  qdrant_storage:
