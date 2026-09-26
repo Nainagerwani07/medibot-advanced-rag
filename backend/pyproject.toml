@@ -3,7 +3,11 @@ name = "medibot"
 version = "0.1.0"
 description = "Secure healthcare assistant: Hybrid RAG, reranking, SQL RAG and Qdrant-level RBAC"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "docling>=2.130.0",
+    "torch>=2.14.0",
+    "torchvision>=0.29.0",
+]
 
 [build-system]
 requires = ["uv_build>=0.12.5,<0.13.0"]
@@ -30,3 +34,14 @@ select = ["E", "W", "F", "I", "B", "UP", "SIM", "S"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+# CPU-only machine (NF2): take torch/torchvision from PyTorch's CPU wheel index instead of the
+# default CUDA build (~4 GB of unused GPU libraries).
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cpu" }
+torchvision = { index = "pytorch-cpu" }

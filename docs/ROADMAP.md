@@ -9,7 +9,7 @@ Status legend: ⬜ not started · 🟡 in progress · ✅ done
 |---|---|---|---|---|---|
 | 0 | ✅ | Requirements, architecture, repo docs | Reading a brief as testable requirements | `docs/` + `CLAUDE.md` in repo | — |
 | 1 | ✅ | Env setup + data exploration | Why fixed-size chunking hurts medical docs; project layout | venv, deps, Qdrant container up, Groq key works, dataset in `data/`, DB schema looked at | NF2, NF3, R5.1 |
-| 2 | ⬜ | Docling parsing | DoclingDocument tree, layout & table models, OCR on/off | Parsed structure of every file inspected (headings, tables, the `.md` file) | R2.1 |
+| 2 | ✅ | Docling parsing | DoclingDocument tree, layout & table models, OCR on/off | Parsed structure of every file inspected (headings, tables, the `.md` file) | R2.1 |
 | 3 | ⬜ | HybridChunker + metadata | Structure-first then token splitting; tokenizer alignment; `contextualize()` | Chunks printed with heading context + all 5 metadata fields; chunk_type correct for tables | R2.2–R2.4 |
 | 4 | ⬜ | Embeddings + Qdrant indexing | Dense vs sparse vectors, BM25/IDF, named vectors, payload indexes | `scripts/ingest.py` loads everything into Qdrant; counts per collection check out | R2.5, R3.1 |
 | 5 | ⬜ | Hybrid retrieval + RBAC filter | Prefetch, RRF fusion, why filtering happens inside the search | One `query_points` call does hybrid + filter; nurse can never get billing chunks | R1.1, R3.2, R3.3 |
@@ -55,3 +55,30 @@ Add one entry at the end of each session: what was done, what we learned, what's
   - User: enable GitHub branch protection on `main` after this PR merges.
 - **Next:** Day 2 — Docling parsing: inspect the DoclingDocument tree (headings, tables, page header/footer
   labels) for every file, including the `.md` guide.
+
+### Day 2 — 2026-09-27
+- **Done:**
+  - Branch `feature/day-2-docling-parsing` (from `main` after PR #1 merged).
+  - `uv add docling` (2.130.0). torch/torchvision switched to CPU-only wheels (D15): venv 5.9 GB → 1.5 GB.
+  - `backend/scripts/explore_docling.py`: parses one file (OCR off, table structure on); prints the element tree
+    with content layer / label / heading level / page, tables as DataFrames, optional Markdown export.
+  - `backend/scripts/inspect_all.py`: parses all 12 files (~198 s total on CPU); per-file label counts, heading levels,
+    tables, unnumbered headings. Caches DoclingDocument JSON + tree text in `data/parsed/` (gitignored).
+  - Checked PDF font sizes of every Docling heading (pypdfium2, scratchpad script): consistent across all 11 PDFs.
+- **Learned:**
+  - DoclingDocument is a typed tree (title, section_header, text, list_item, table, code, footnote), not a string.
+  - Layout model classifies page regions; TableFormer rebuilds rows/columns (wrapped cells rejoined; 53 tables intact).
+  - Content layers: page headers/footers go to `FURNITURE`, real content to `BODY`, so no regex cleanup is needed.
+  - OCR off: digital PDFs already have an exact text layer; OCR only adds CPU time and character errors.
+  - Docling detects PDF headings but not their depth (all L1); callout labels ("Important", "Red flags") look like headings.
+  - Test a rule on the whole dataset: numbering-based levels would fail on 6/11 PDFs; font size is consistent.
+  - Markdown input keeps real `#` levels; fenced blocks become `code` items (R2.1 code blocks).
+  - Check the default build of ML dependencies: torch installed as CUDA on a CPU-only machine.
+- **Open items:**
+  - Day 3: implement font-size heading levels (D16) before HybridChunker. Edge cases: equipment manual title didn't
+    match by text (needs fallback); bold `ICD-10: A90…` line in treatment_protocols is labelled a heading.
+  - Day 3: inline code in the `.md` (`billing_codes.pdf`) becomes separate `code` items; make sure chunks keep them in their sentence
+    and `chunk_type` isn't set to `code` for them.
+  - Day 3: `diagnostic_reference` has 2 `footnote` items; decide chunk_type (probably text).
+  - User: enable GitHub branch protection on `main` (still open from Day 1).
+- **Next:** Day 3 — HybridChunker + metadata, starting from the cached `data/parsed/*.json` and the heading-level fix.
