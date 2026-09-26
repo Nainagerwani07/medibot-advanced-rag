@@ -11,7 +11,7 @@ description: Start a MediBot learning session - recap where we left off, set up 
 - Recent commits: !`git log --oneline -5`
 - Recent PRs: !`gh pr list --repo Nainagerwani07/medibot-advanced-rag --state all --limit 5 --json number,headRefName,state,url`
 - Latest session-log entry:
-!`awk '/^### Day/{buf=""} {buf=buf"\n"$0} END{print buf}' docs/ROADMAP.md`
+!`tac docs/ROADMAP.md | sed '/^### Day/q' | tac`
 
 ## Steps
 

@@ -56,6 +56,10 @@ flowchart TD
 
 CPU note: the PDFs are digital (not scanned), so we can **turn off OCR** in Docling. This speeds up parsing a lot on CPU.
 
+Heading levels (D16): Docling marks every PDF heading as level 1, so before chunking we reset each
+heading's level from its font size. Without this, a chunk's heading context (R2.3) would name the wrong
+parent section, e.g. a callout label like "Important" instead of "10. Abandonment of Service".
+
 ### 2.2 Vector store (Qdrant in Docker)
 - One Qdrant collection, `medibot_docs`, with **named vectors**:
   - `dense`: 384-dim, cosine (bge-small-en-v1.5)

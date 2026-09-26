@@ -41,12 +41,13 @@ Hybrid RAG (dense + BM25 in Qdrant) → cross-encoder rerank → Groq LLM, plus 
 4. Suggest a commit message (don't commit unless asked).
 
 ## Current state
-- **Last completed:** Day 1 — env setup, quality tooling, Qdrant, Groq check, data exploration
-  (PR from `feature/day-1-env-setup`; check whether it's merged before branching for Day 2).
-- **Next:** Day 2 — Docling parsing (`uv add docling` then; OCR off). Inspect structure of all 12 files.
-- **Code written so far:** tooling only (backend/pyproject.toml, pre-commit, .claude hooks/skills, docker-compose).
-  No application code yet; `backend/src/medibot/__init__.py` is empty.
-- **Open items:** see the Day 1 entry in `docs/ROADMAP.md`.
+- **Last completed:** Day 2 — Docling parsing inspected for all 12 files
+  (PR from `feature/day-2-docling-parsing`; check whether it's merged before branching for Day 3).
+- **Next:** Day 3 — heading levels from font size (D16), then HybridChunker + metadata. Load cached
+  `data/parsed/*.json` (`DoclingDocument.load_from_json`) instead of re-parsing (~200 s).
+- **Code written so far:** tooling + two exploration scripts (`backend/scripts/explore_docling.py`,
+  `backend/scripts/inspect_all.py`). No application code in `backend/src/medibot/` yet.
+- **Open items:** see the Day 2 entry in `docs/ROADMAP.md`.
 
 ## Environment facts
 - Dataset zip (outside repo): `/home/naina/Downloads/codebasics/29-aug-session-5/Medibot_Assignment_Resources/mediassist_data.zip`
@@ -61,3 +62,4 @@ Hybrid RAG (dense + BM25 in Qdrant) → cross-encoder rerank → Groq LLM, plus 
 - gh: remote uses SSH alias `github-personal`; gh needs `GH_REPO=Nainagerwani07/medibot-advanced-rag`
   (set in `.claude/settings.json`) and explicit `--head <branch>`.
 - Platform: Linux, CPU only (12 cores, 23 GB RAM), Docker available, system Python 3.10 (uv provides 3.12), no `jq`.
+- torch comes from the PyTorch CPU index (D15); don't let a `uv add` pull the CUDA build back in.
