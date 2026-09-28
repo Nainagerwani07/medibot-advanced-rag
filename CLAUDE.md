@@ -47,6 +47,7 @@ Hybrid RAG (dense + BM25 in Qdrant) → cross-encoder rerank → Groq LLM, plus 
   Entry points: `ingestion.parsing.load_document()` → `ingestion.chunking.build_chunker()` / `chunk_document()`.
 - **Code written so far:** `src/medibot/rbac.py`; `src/medibot/ingestion/{parsing,headings,chunking}.py`;
   `tests/test_chunking.py` (9 tests); exploration scripts in `backend/scripts/`. Diagrams in `docs/diagrams/`.
+  Chunks can be dumped to `data/chunks.jsonl` (gitignored) with `scripts/show_chunks.py`; not stored in Qdrant yet.
 - **Open items:** see the Day 3 entry in `docs/ROADMAP.md`.
 
 ## Environment facts
