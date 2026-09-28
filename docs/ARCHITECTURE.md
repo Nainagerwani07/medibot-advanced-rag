@@ -12,9 +12,10 @@ They are kept apart because Docling and the embedding models are slow to load. T
 ```mermaid
 flowchart LR
     subgraph OFFLINE["Offline: ingest.py"]
-        A[PDF / MD files] --> B[Docling DocumentConverter]
-        B --> C[DoclingDocument tree]
-        C --> D[HybridChunker]
+        A[PDF / MD files] --> B[Docling DocumentConverter<br/>MD: inline formatting stripped first]
+        B --> B2[PDF: heading levels<br/>from font size]
+        B2 --> C[DoclingDocument tree]
+        C --> D[HybridChunker, 256 tokens<br/>tables as key: value rows]
         D --> E["contextualize(): heading + chunk text"]
         E --> F[Attach metadata<br/>source_document, collection,<br/>access_roles, section_title, chunk_type]
         F --> G1[Dense embed<br/>bge-small-en-v1.5]
@@ -50,7 +51,8 @@ flowchart TD
 | Step | Tool | Why |
 |---|---|---|
 | Parse | Docling `DocumentConverter` | Layout and table models find headings, tables and reading order. Plain text extraction flattens tables, so a dosage table ends up as a list of unrelated numbers. |
-| Chunk | Docling `HybridChunker` | Splits by structure first, then by token count. Uses the **same tokenizer as the embedding model**, so no chunk is silently cut off at embed time. |
+| Fix structure | our code (`headings.py`, `parsing.py`) | PDF heading levels rebuilt from font size (D16); inline Markdown formatting stripped before parsing (D18). |
+| Chunk | Docling `HybridChunker` | Splits by structure first, then by token count (max 256 incl. headings, D17). Uses the **same tokenizer as the embedding model**, so no chunk is silently cut off at embed time. Tables are written one `column: value` line per row so they split between rows (D18). |
 | Contextualise | `chunker.contextualize(chunk)` | Adds the heading path to the chunk text. "25 mg twice daily" becomes "Drug Formulary > Metformin > Dosage: 25 mg twice daily". |
 | Metadata | our code | `collection` comes from the folder name, `access_roles` from one RBAC map, `section_title` from `chunk.meta.headings`, and `chunk_type` from Docling item labels (table/code/text). |
 
@@ -59,6 +61,9 @@ CPU note: the PDFs are digital (not scanned), so we can **turn off OCR** in Docl
 Heading levels (D16): Docling marks every PDF heading as level 1, so before chunking we reset each
 heading's level from its font size. Without this, a chunk's heading context (R2.3) would name the wrong
 parent section, e.g. a callout label like "Important" instead of "10. Abandonment of Service".
+
+Step-by-step diagrams (pipeline, content layers, heading stack, table splitting):
+[diagrams/ingestion.md](diagrams/ingestion.md).
 
 ### 2.2 Vector store (Qdrant in Docker)
 - One Qdrant collection, `medibot_docs`, with **named vectors**:
@@ -137,7 +142,7 @@ Items marked *(planned)* don't exist yet.
 medibot-advanced-rag/
 ├── CLAUDE.md                 # context for Claude Code sessions
 ├── README.md
-├── docs/                     # requirements, architecture, roadmap, decisions
+├── docs/                     # requirements, architecture, roadmap, decisions, diagrams/
 ├── docker-compose.yml        # Qdrant (pinned, localhost-only)
 ├── .env.example              # required env vars (real values in gitignored .env)
 ├── .pre-commit-config.yaml   # git hooks: gitleaks, ruff, main-branch guard
@@ -147,14 +152,14 @@ medibot-advanced-rag/
 ├── backend/                  # uv project (pyproject.toml, uv.lock)
 │   ├── src/medibot/
 │   │   ├── config.py         # settings from .env                        (planned)
-│   │   ├── rbac.py           # single source of truth: role → collections (planned)
-│   │   ├── ingestion/        # docling parse, chunk, metadata            (planned)
+│   │   ├── rbac.py           # single source of truth: role → collections
+│   │   ├── ingestion/        # parsing.py, headings.py, chunking.py (embedding: Day 4)
 │   │   ├── retrieval/        # qdrant hybrid search, reranker            (planned)
 │   │   ├── sql_rag/          # sql_rag_chain                             (planned)
 │   │   ├── routing/          # analytical vs document, target collection (planned)
 │   │   ├── generation/       # prompts, LLM client, citations            (planned)
 │   │   └── api/              # FastAPI app, auth, endpoints              (planned)
-│   ├── scripts/ingest.py     #                                           (planned)
+│   ├── scripts/              # explore/inspect/profile/show_chunks (Day 2-3); ingest.py (planned)
 │   ├── eval/                 # questions.json, compare.py                (planned)
 │   └── tests/                # RBAC adversarial tests, unit tests
 ├── frontend/                 # Next.js                                   (planned)
