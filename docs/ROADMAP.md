@@ -12,7 +12,7 @@ Status legend: ⬜ not started · 🟡 in progress · ✅ done
 | 2 | ✅ | Docling parsing | DoclingDocument tree, layout & table models, OCR on/off | Parsed structure of every file inspected (headings, tables, the `.md` file) | R2.1 |
 | 3 | ✅ | HybridChunker + metadata | Structure-first then token splitting; tokenizer alignment; `contextualize()` | Chunks printed with heading context + all 5 metadata fields; chunk_type correct for tables | R2.2–R2.4 |
 | 4 | ✅ | Embeddings + Qdrant indexing | Dense vs sparse vectors, BM25/IDF, named vectors, payload indexes | `scripts/ingest.py` loads everything into Qdrant; counts per collection check out | R2.5, R3.1 |
-| 5 | ⬜ | Hybrid retrieval + RBAC filter | Prefetch, RRF fusion, why filtering happens inside the search | One `query_points` call does hybrid + filter; nurse can never get billing chunks | R1.1, R3.2, R3.3 |
+| 5 | ✅ | Hybrid retrieval + RBAC filter | Prefetch, RRF fusion, why filtering happens inside the search | One `query_points` call does hybrid + filter; nurse can never get billing chunks | R1.1, R3.2, R3.3 |
 | 6 | ⬜ | Eval set + cross-encoder rerank | Bi- vs cross-encoder; hit@k, MRR | Table comparing dense-only / hybrid / hybrid+rerank; reranker scores logged | R3.5, R4 |
 | 7 | ⬜ | Grounded generation + SQL RAG | Grounded prompts, citations, text-to-SQL pitfalls, read-only execution | Answers with citations; `sql_rag_chain` correct on ≥4 questions | R3.4, R5 |
 | 8 | ⬜ | Router + FastAPI + JWT | Server-side authorization, dependency injection | All 4 endpoints work with curl; role taken from token | R1.4, R6 |
@@ -143,3 +143,35 @@ Add one entry at the end of each session: what was done, what we learned, what's
   - User: enable GitHub branch protection on `main` (still open).
 - **Next:** Day 5 — hybrid retrieval + RBAC filter: one `query_points` call with dense + sparse prefetch, RRF fusion
   and the `access_roles` filter inside the query; nurse can never get billing chunks.
+
+### Day 5 — 2026-09-28
+- **Done:**
+  - Branch `feature/day-5-hybrid-retrieval-rbac` (from `main` after PR #5 merged).
+  - `scripts/explore_retrieval.py`: dense only / BM25 only / hybrid RRF / hybrid as nurse on 3 queries; rebuilt
+    Qdrant's RRF scores from the two rank lists; filter placement experiment; post-filter vs in-search filter.
+  - `retrieval/hybrid.py`: `HybridRetriever.search(query, role, k=10, prefetch_k=20)`, one `query_points` call
+    (dense + sparse prefetch, RRF). `role_filter()` = `access_roles` contains role AND `collection` in the role's
+    collections (D21), set on each prefetch and the outer query; unknown role raises before any search.
+    Returns `RetrievedChunk(id, score, text, metadata)`; models loaded once in the constructor.
+  - `tests/test_retrieval.py` (35 tests, in-memory Qdrant): every role x 5 queries stays in its collections,
+    nurse never gets billing, a mis-stamped chunk is stopped by the collection check, k is filled for a nurse on
+    the attack query, admin reaches all 5 collections, exact-term hits rank 1st, unknown roles rejected.
+    Mutation check: dropping the collection condition fails 7 tests, dropping the filter fails 28. 49 tests pass.
+  - Docs: D21, D22; ARCHITECTURE §2.3 + layout; `docs/diagrams/retrieval.md`.
+- **Learned:**
+  - Prefetch: sub-searches inside one request whose results feed the outer query (here, fusion).
+  - Dense and BM25 fail on different queries: dense ranked the ceftriaxone table 4th, BM25 put an ICU chunk 1st
+    for a paraphrased leave question; hybrid got both right.
+  - Qdrant's RRF is `sum 1/(2 + rank)` (rank from 0, k=2): scores are ignored, and 1st place in either list counts
+    a lot. Textbook k=60 is much flatter.
+  - Qdrant pushes a top-level filter down into the prefetches (same ids, same order as per-prefetch filters).
+  - Post-filtering fails even without an attack: as a nurse, top-5 then drop left 0 chunks for the LLM on both
+    tested queries; in-search filtering returned 5 allowed chunks.
+  - A security test only counts once you've seen it fail (mutation check).
+- **Open items:**
+  - A filtered search always returns *something* (nurse asking for E11.9 gets checklists); the refusal (R1.3)
+    must come from the router/answer layer (Day 8–9), not from empty results.
+  - Day 6: compare RRF k=2 vs k=60 and prefetch_k on the eval set (D22).
+  - Carried over: `leave_policy.pdf` "Important" callout section_title; max_tokens 256 vs 512; branch protection.
+- **Next:** Day 6 — eval set + cross-encoder rerank: hit@k / MRR for dense-only vs hybrid vs hybrid+rerank,
+  reranker scores logged.
