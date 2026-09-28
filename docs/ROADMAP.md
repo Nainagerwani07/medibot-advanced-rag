@@ -11,7 +11,7 @@ Status legend: ⬜ not started · 🟡 in progress · ✅ done
 | 1 | ✅ | Env setup + data exploration | Why fixed-size chunking hurts medical docs; project layout | venv, deps, Qdrant container up, Groq key works, dataset in `data/`, DB schema looked at | NF2, NF3, R5.1 |
 | 2 | ✅ | Docling parsing | DoclingDocument tree, layout & table models, OCR on/off | Parsed structure of every file inspected (headings, tables, the `.md` file) | R2.1 |
 | 3 | ✅ | HybridChunker + metadata | Structure-first then token splitting; tokenizer alignment; `contextualize()` | Chunks printed with heading context + all 5 metadata fields; chunk_type correct for tables | R2.2–R2.4 |
-| 4 | ⬜ | Embeddings + Qdrant indexing | Dense vs sparse vectors, BM25/IDF, named vectors, payload indexes | `scripts/ingest.py` loads everything into Qdrant; counts per collection check out | R2.5, R3.1 |
+| 4 | ✅ | Embeddings + Qdrant indexing | Dense vs sparse vectors, BM25/IDF, named vectors, payload indexes | `scripts/ingest.py` loads everything into Qdrant; counts per collection check out | R2.5, R3.1 |
 | 5 | ⬜ | Hybrid retrieval + RBAC filter | Prefetch, RRF fusion, why filtering happens inside the search | One `query_points` call does hybrid + filter; nurse can never get billing chunks | R1.1, R3.2, R3.3 |
 | 6 | ⬜ | Eval set + cross-encoder rerank | Bi- vs cross-encoder; hit@k, MRR | Table comparing dense-only / hybrid / hybrid+rerank; reranker scores logged | R3.5, R4 |
 | 7 | ⬜ | Grounded generation + SQL RAG | Grounded prompts, citations, text-to-SQL pitfalls, read-only execution | Answers with citations; `sql_rag_chain` correct on ≥4 questions | R3.4, R5 |
@@ -113,3 +113,33 @@ Add one entry at the end of each session: what was done, what we learned, what's
   - User: enable GitHub branch protection on `main` (still open).
 - **Next:** Day 4 — embeddings + Qdrant indexing: dense (bge-small) + sparse (BM25) named vectors, payload indexes,
   `scripts/ingest.py` loading all 268 chunks.
+
+### Day 4 — 2026-09-28
+- **Done:**
+  - Branch `feature/day-4-embeddings-qdrant-indexing` (from `main` after PR #4 merged).
+  - Deps: `fastembed` (ONNX embeddings, no torch) and `qdrant-client`; torch still the CPU build (D15).
+  - `scripts/explore_embeddings.py`: tokenizer check (FastEmbed ONNX vs HF: 0 mismatches over 268 chunks,
+    longest 258 incl. [CLS]/[SEP]); dense vector shape + query/chunk cosine table; BM25 entries traced back to stems.
+  - `ingestion/indexing.py`: collection `medibot_docs` with named vectors `dense` (384, cosine) and `sparse`
+    (`Modifier.IDF`), keyword payload indexes (access_roles, collection, source_document, chunk_type), BM25 `avg_len`
+    from our chunks (D19), deterministic uuid5 point ids + full rebuild (D20).
+  - `scripts/ingest.py`: parse → chunk → embed → upload (~25 s), then verifies counts per collection and per role:
+    268 points; billing 50, clinical 65, equipment 31, general 78, nursing 44; nurse 122, doctor 187, admin 268.
+  - `tests/test_indexing.py` (5 tests, in-memory Qdrant): schema, both vectors stored, stable ids, no duplicates on
+    re-index (confirmed random ids give 8 for 4), nurse filter sees only nursing + general. 14 tests pass.
+  - Docs: D19, D20; ARCHITECTURE §2.2 + layout; `docs/diagrams/ingestion.md` §5 (one point, two vectors).
+- **Learned:**
+  - Dense vs sparse: 384 normalised floats for meaning vs (hashed stem, weight) pairs for exact terms.
+  - BM25 in FastEmbed = stem + mmh3 hash + TF part only; queries are weight 1.0 per term; IDF comes from Qdrant.
+  - Why IDF matters here: key: value tables repeat column names, so "dose"/"route" top TF; rare drug names must win.
+  - `avg_len` is BM25 length normalisation relative to the corpus; a wrong default skews every chunk.
+  - bge cosine scores sit in a narrow band (0.46–0.70): ranks matter, not absolute scores, hence RRF on Day 5.
+  - Named vectors (two vectors per point) and payload indexes (filter inside the search, not after).
+  - Idempotent ingestion via deterministic ids; views of the data: dashboard, REST scroll, Python scroll.
+- **Open items:**
+  - Callout scope: `leave_policy.pdf` chunk after the callout has `section_title = "Important"`; affects citations.
+  - transformers "1173 > 512" warning during chunking is the chunker measuring whole sections (harmless).
+  - Day 6: compare max_tokens 256 vs 512 on the eval set.
+  - User: enable GitHub branch protection on `main` (still open).
+- **Next:** Day 5 — hybrid retrieval + RBAC filter: one `query_points` call with dense + sparse prefetch, RRF fusion
+  and the `access_roles` filter inside the query; nurse can never get billing chunks.

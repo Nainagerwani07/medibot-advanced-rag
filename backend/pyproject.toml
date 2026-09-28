@@ -5,6 +5,8 @@ description = "Secure healthcare assistant: Hybrid RAG, reranking, SQL RAG and Q
 requires-python = ">=3.12"
 dependencies = [
     "docling>=2.130.0",
+    "fastembed>=0.8.1",
+    "qdrant-client>=1.19.1",
     "torch>=2.14.0",
     "torchvision>=0.29.0",
 ]
