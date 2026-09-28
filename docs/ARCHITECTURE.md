@@ -83,10 +83,13 @@ Step-by-step diagrams (pipeline, content layers, heading stack, table splitting)
 One `query_points` call:
 ```
 prefetch = [ dense search (limit 20, filter), sparse search (limit 20, filter) ]
-query    = FusionQuery(RRF)
-filter   = access_roles MatchAny([role])
+query    = FusionQuery(RRF)            # Qdrant default: sum 1/(2 + rank), D22
+filter   = access_roles contains role AND collection in ROLE_COLLECTIONS[role]   # D21
 limit    = 10
 ```
+Code: `HybridRetriever.search(query, role, k)` in `retrieval/hybrid.py`; diagram in
+[diagrams/retrieval.md](diagrams/retrieval.md). The filter is set on each prefetch **and** the outer query, and an
+unknown role raises instead of searching unfiltered.
 - **Why RRF** (Reciprocal Rank Fusion): dense (cosine) and BM25 scores are on different scales, so adding them doesn't mean anything. RRF only uses rank positions.
 - **Why write it with qdrant-client instead of LangChain**: the filter placement is visible and easy to audit, and it's a learning goal.
 
@@ -161,12 +164,12 @@ medibot-advanced-rag/
 │   │   ├── config.py         # settings from .env                        (planned)
 │   │   ├── rbac.py           # single source of truth: role → collections
 │   │   ├── ingestion/        # parsing.py, headings.py, chunking.py, indexing.py
-│   │   ├── retrieval/        # qdrant hybrid search, reranker            (planned)
+│   │   ├── retrieval/        # hybrid.py (hybrid search + RBAC filter); reranker (planned)
 │   │   ├── sql_rag/          # sql_rag_chain                             (planned)
 │   │   ├── routing/          # analytical vs document, target collection (planned)
 │   │   ├── generation/       # prompts, LLM client, citations            (planned)
 │   │   └── api/              # FastAPI app, auth, endpoints              (planned)
-│   ├── scripts/              # explore/inspect/profile/show_chunks (Day 2-3); ingest.py, explore_embeddings.py (Day 4)
+│   ├── scripts/              # explore/inspect/profile/show_chunks (Day 2-3); ingest.py, explore_embeddings.py (Day 4); explore_retrieval.py (Day 5)
 │   ├── eval/                 # questions.json, compare.py                (planned)
 │   └── tests/                # RBAC adversarial tests, unit tests
 ├── frontend/                 # Next.js                                   (planned)

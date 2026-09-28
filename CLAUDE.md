@@ -41,18 +41,19 @@ Hybrid RAG (dense + BM25 in Qdrant) → cross-encoder rerank → Groq LLM, plus 
 4. Suggest a commit message (don't commit unless asked).
 
 ## Current state
-- **Last completed:** Day 4 — FastEmbed dense (bge-small) + BM25 sparse (IDF in Qdrant), `medibot_docs` collection,
-  268 points indexed and count-verified (PR from `feature/day-4-embeddings-qdrant-indexing`; check whether it's
-  merged before branching for Day 5).
-- **Next:** Day 5 — hybrid retrieval + RBAC filter in `src/medibot/retrieval/`: one `query_points` call
-  (dense + sparse prefetch, RRF fusion, `access_roles` filter inside the query).
-  Entry points: `ingestion.indexing` constants (`COLLECTION_NAME`, `DENSE_VECTOR`, `SPARSE_VECTOR`, `SPARSE_MODEL`),
-  `qdrant_client()`, `chunking.EMBED_MODEL`.
+- **Last completed:** Day 5 — hybrid retrieval + RBAC: `HybridRetriever.search(query, role, k=10)` does one
+  `query_points` call (dense + BM25 prefetch, RRF k=2) with the two-part role filter on every stage (D21, D22);
+  35 RBAC/retrieval tests (PR from `feature/day-5-hybrid-retrieval-rbac`; check whether it's merged before
+  branching for Day 6).
+- **Next:** Day 6 — eval set + cross-encoder rerank (R3.5, R4, NF5): questions with expected sources, hit@k / MRR
+  for dense-only vs hybrid vs hybrid+rerank (MiniLM-L-6, top-10 → top-3), reranker scores logged; also try RRF
+  k=60 and max_tokens 256 vs 512. Entry points: `retrieval.hybrid.HybridRetriever`, `RetrievedChunk`, `role_filter`.
 - **Code written so far:** `src/medibot/rbac.py`; `src/medibot/ingestion/{parsing,headings,chunking,indexing}.py`;
-  `scripts/ingest.py` (rebuild + verify); `tests/test_chunking.py` (9) + `tests/test_indexing.py` (5);
-  exploration scripts in `backend/scripts/`. Diagrams in `docs/diagrams/`.
+  `src/medibot/retrieval/hybrid.py`; `scripts/ingest.py` (rebuild + verify); tests: `test_chunking.py` (9),
+  `test_indexing.py` (5), `test_retrieval.py` (35); exploration scripts in `backend/scripts/`
+  (`explore_retrieval.py` = Day 5). Diagrams in `docs/diagrams/`.
   Re-index with `uv run python scripts/ingest.py` from `backend/` (Qdrant must be up).
-- **Open items:** see the Day 4 entry in `docs/ROADMAP.md`.
+- **Open items:** see the Day 5 entry in `docs/ROADMAP.md`.
 
 ## Environment facts
 - Dataset zip (outside repo): `/home/naina/Downloads/codebasics/29-aug-session-5/Medibot_Assignment_Resources/mediassist_data.zip`
