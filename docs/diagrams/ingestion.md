@@ -1,7 +1,7 @@
 # Ingestion pipeline: diagrams
 
-Built on Day 2 (parsing) and Day 3 (chunking + metadata). Code: `backend/src/medibot/ingestion/`,
-`backend/src/medibot/rbac.py`. Decisions: D4, D16, D17, D18 in [DECISIONS.md](../DECISIONS.md).
+Built on Day 2 (parsing), Day 3 (chunking + metadata) and Day 4 (embedding + indexing). Code: `backend/src/medibot/ingestion/`,
+`backend/src/medibot/rbac.py`. Decisions: D4, D5, D16–D20 in [DECISIONS.md](../DECISIONS.md).
 
 ## 1. From source file to chunk
 
@@ -31,7 +31,7 @@ flowchart TD
 
     RBAC["rbac.py<br/>role → collections"] -->|access_roles| OUT
     CTX --> OUT["Chunk<br/>text · embed_text · metadata<br/>source_document, collection, access_roles,<br/>section_title, chunk_type (+ headings, pages)"]
-    OUT --> NEXT["Day 4: dense + BM25 embed → Qdrant"]
+    OUT --> NEXT["embed + index → Qdrant (section 5)"]
 ```
 
 Result on the dataset: 268 chunks (194 text, 73 table, 1 code), all ≤ 256 tokens, 0 missing metadata.
@@ -82,4 +82,32 @@ C. key: value rows (chosen)    one row per line, ~44 tokens, split between rows 
    1. Antimicrobials
    Drug: Amoxicillin; Class: Penicillin; Route: Oral; Standard Dose: 500 mg TDS; …
    Drug: Piperacillin-Tazobactam; …; Storage: Refrigerate post-recon.; …      ✓ every row stands alone
+```
+
+## 5. Embedding and indexing: one point, two vectors (Day 4, D19, D20)
+
+```mermaid
+flowchart TD
+    CH["Chunk<br/>embed_text = heading path + body"]
+    CH --> D["bge-small-en-v1.5 (ONNX, FastEmbed)<br/>WordPiece tokens → transformer → 384 floats<br/>L2-normalised, every value non-zero"]
+    CH --> S["Qdrant/bm25 (FastEmbed)<br/>lowercase → drop stopwords → stem → mmh3 hash<br/>weight = TF part of BM25, avg_len = 49 (D19)"]
+    D --> P
+    S --> P
+    CH -->|metadata + text| P
+    P["PointStruct<br/>id = uuid5(source_document#i) (D20)<br/>vector = {dense, sparse}<br/>payload = metadata, text, embed_text"]
+    P --> Q[("Qdrant collection medibot_docs<br/>dense: 384, cosine<br/>sparse: modifier IDF<br/>keyword indexes: access_roles, collection,<br/>source_document, chunk_type")]
+```
+
+What the two vectors look like for the same formulary chunk (from `scripts/explore_embeddings.py`):
+
+```
+dense   [-0.0199, -0.0125, 0.0341, -0.0125, 0.0145, …]      384 values, meaning ("heart attack" ≈ "myocardial infarction")
+sparse  {1746280415: 1.95 (drug), 523704640: 1.90 (dose),   51 entries, exact stems ("ceftriaxon")
+         48650196: … (ceftriaxon), …}
+
+query "What is the dose of ceftriaxone?"
+  dense : 384 floats (bge query prefix added)
+  sparse: {523704640: 1, 48650196: 1}   → dose, ceftriaxon; stopwords gone
+  Qdrant scores sparse as Σ IDF(term) × TF weight: 'ceftriaxon' is in 2 of 268 chunks (high IDF),
+  'dose' is in most formulary chunks (low IDF), so the drug name decides the match.
 ```

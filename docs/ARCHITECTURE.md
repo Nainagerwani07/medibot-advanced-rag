@@ -63,13 +63,20 @@ heading's level from its font size. Without this, a chunk's heading context (R2.
 parent section, e.g. a callout label like "Important" instead of "10. Abandonment of Service".
 
 Step-by-step diagrams (pipeline, content layers, heading stack, table splitting):
-[diagrams/ingestion.md](diagrams/ingestion.md).
+[diagrams/ingestion.md](diagrams/ingestion.md) (section 5: embedding and indexing).
 
 ### 2.2 Vector store (Qdrant in Docker)
 - One Qdrant collection, `medibot_docs`, with **named vectors**:
   - `dense`: 384-dim, cosine (bge-small-en-v1.5)
   - `sparse`: BM25 via FastEmbed `Qdrant/bm25`, with the `IDF` modifier so Qdrant computes IDF itself
-- **Payload index** on `access_roles` (keyword) and `collection`, so filtering is fast and happens inside the search.
+- **Payload indexes** (keyword) on `access_roles`, `collection`, `source_document` and `chunk_type`, so filtering is fast and happens inside the search.
+- BM25 `avg_len` is set to our chunks' real average (~49 stemmed words, D19); the stored sparse values are only
+  the term-frequency part, and Qdrant applies IDF at query time.
+- Point ids are `uuid5(source_document#chunk_index)`, and `ingest.py` rebuilds the collection each run (D20).
+- Payload per point: the 5 metadata fields + `headings`, `page_numbers`, `text` (for the LLM and citations) and
+  `embed_text` (what was embedded, for debugging retrieval).
+- Code: `backend/src/medibot/ingestion/indexing.py`; run with `backend/scripts/ingest.py`, which checks the
+  counts per collection and per role after loading (268 points on the current data).
 - Why one collection instead of five: RBAC then comes from a *metadata filter*, which is what the brief asks for. It also lets admin search across everything in one query.
 
 ### 2.3 Hybrid retrieval (`backend/src/medibot/retrieval/`), using qdrant-client directly
@@ -153,13 +160,13 @@ medibot-advanced-rag/
 │   ├── src/medibot/
 │   │   ├── config.py         # settings from .env                        (planned)
 │   │   ├── rbac.py           # single source of truth: role → collections
-│   │   ├── ingestion/        # parsing.py, headings.py, chunking.py (embedding: Day 4)
+│   │   ├── ingestion/        # parsing.py, headings.py, chunking.py, indexing.py
 │   │   ├── retrieval/        # qdrant hybrid search, reranker            (planned)
 │   │   ├── sql_rag/          # sql_rag_chain                             (planned)
 │   │   ├── routing/          # analytical vs document, target collection (planned)
 │   │   ├── generation/       # prompts, LLM client, citations            (planned)
 │   │   └── api/              # FastAPI app, auth, endpoints              (planned)
-│   ├── scripts/              # explore/inspect/profile/show_chunks (Day 2-3); ingest.py (planned)
+│   ├── scripts/              # explore/inspect/profile/show_chunks (Day 2-3); ingest.py, explore_embeddings.py (Day 4)
 │   ├── eval/                 # questions.json, compare.py                (planned)
 │   └── tests/                # RBAC adversarial tests, unit tests
 ├── frontend/                 # Next.js                                   (planned)

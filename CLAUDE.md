@@ -41,14 +41,18 @@ Hybrid RAG (dense + BM25 in Qdrant) → cross-encoder rerank → Groq LLM, plus 
 4. Suggest a commit message (don't commit unless asked).
 
 ## Current state
-- **Last completed:** Day 3 — heading-level fix, HybridChunker + metadata, 268 chunks validated
-  (PR from `feature/day-3-hybridchunker-metadata`; check whether it's merged before branching for Day 4).
-- **Next:** Day 4 — embeddings (FastEmbed bge-small dense + BM25 sparse) and Qdrant indexing via `scripts/ingest.py`.
-  Entry points: `ingestion.parsing.load_document()` → `ingestion.chunking.build_chunker()` / `chunk_document()`.
-- **Code written so far:** `src/medibot/rbac.py`; `src/medibot/ingestion/{parsing,headings,chunking}.py`;
-  `tests/test_chunking.py` (9 tests); exploration scripts in `backend/scripts/`. Diagrams in `docs/diagrams/`.
-  Chunks can be dumped to `data/chunks.jsonl` (gitignored) with `scripts/show_chunks.py`; not stored in Qdrant yet.
-- **Open items:** see the Day 3 entry in `docs/ROADMAP.md`.
+- **Last completed:** Day 4 — FastEmbed dense (bge-small) + BM25 sparse (IDF in Qdrant), `medibot_docs` collection,
+  268 points indexed and count-verified (PR from `feature/day-4-embeddings-qdrant-indexing`; check whether it's
+  merged before branching for Day 5).
+- **Next:** Day 5 — hybrid retrieval + RBAC filter in `src/medibot/retrieval/`: one `query_points` call
+  (dense + sparse prefetch, RRF fusion, `access_roles` filter inside the query).
+  Entry points: `ingestion.indexing` constants (`COLLECTION_NAME`, `DENSE_VECTOR`, `SPARSE_VECTOR`, `SPARSE_MODEL`),
+  `qdrant_client()`, `chunking.EMBED_MODEL`.
+- **Code written so far:** `src/medibot/rbac.py`; `src/medibot/ingestion/{parsing,headings,chunking,indexing}.py`;
+  `scripts/ingest.py` (rebuild + verify); `tests/test_chunking.py` (9) + `tests/test_indexing.py` (5);
+  exploration scripts in `backend/scripts/`. Diagrams in `docs/diagrams/`.
+  Re-index with `uv run python scripts/ingest.py` from `backend/` (Qdrant must be up).
+- **Open items:** see the Day 4 entry in `docs/ROADMAP.md`.
 
 ## Environment facts
 - Dataset zip (outside repo): `/home/naina/Downloads/codebasics/29-aug-session-5/Medibot_Assignment_Resources/mediassist_data.zip`
