@@ -10,7 +10,7 @@ Status legend: ⬜ not started · 🟡 in progress · ✅ done
 | 0 | ✅ | Requirements, architecture, repo docs | Reading a brief as testable requirements | `docs/` + `CLAUDE.md` in repo | — |
 | 1 | ✅ | Env setup + data exploration | Why fixed-size chunking hurts medical docs; project layout | venv, deps, Qdrant container up, Groq key works, dataset in `data/`, DB schema looked at | NF2, NF3, R5.1 |
 | 2 | ✅ | Docling parsing | DoclingDocument tree, layout & table models, OCR on/off | Parsed structure of every file inspected (headings, tables, the `.md` file) | R2.1 |
-| 3 | ⬜ | HybridChunker + metadata | Structure-first then token splitting; tokenizer alignment; `contextualize()` | Chunks printed with heading context + all 5 metadata fields; chunk_type correct for tables | R2.2–R2.4 |
+| 3 | ✅ | HybridChunker + metadata | Structure-first then token splitting; tokenizer alignment; `contextualize()` | Chunks printed with heading context + all 5 metadata fields; chunk_type correct for tables | R2.2–R2.4 |
 | 4 | ⬜ | Embeddings + Qdrant indexing | Dense vs sparse vectors, BM25/IDF, named vectors, payload indexes | `scripts/ingest.py` loads everything into Qdrant; counts per collection check out | R2.5, R3.1 |
 | 5 | ⬜ | Hybrid retrieval + RBAC filter | Prefetch, RRF fusion, why filtering happens inside the search | One `query_points` call does hybrid + filter; nurse can never get billing chunks | R1.1, R3.2, R3.3 |
 | 6 | ⬜ | Eval set + cross-encoder rerank | Bi- vs cross-encoder; hit@k, MRR | Table comparing dense-only / hybrid / hybrid+rerank; reranker scores logged | R3.5, R4 |
@@ -82,3 +82,32 @@ Add one entry at the end of each session: what was done, what we learned, what's
   - Day 3: `diagnostic_reference` has 2 `footnote` items; decide chunk_type (probably text).
   - User: enable GitHub branch protection on `main` (still open from Day 1).
 - **Next:** Day 3 — HybridChunker + metadata, starting from the cached `data/parsed/*.json` and the heading-level fix.
+
+### Day 3 — 2026-09-28
+- **Done:**
+  - Branch `feature/day-3-hybridchunker-metadata` (from `main` after PR #2 merged).
+  - `ingestion/headings.py`: PDF heading levels from the font size inside each heading's bbox (D16); all 241 matched.
+  - `scripts/section_profile.py`: token size of every section/table → `max_tokens = 256` (D17).
+  - `rbac.py`: role → collections map (single source of truth); `access_roles` derived per collection.
+  - `ingestion/chunking.py`: HybridChunker (bge tokenizer, 256, merge_peers), `KeyValueRowTableSerializer` and
+    `_HeadingAwareChunker` for row-aligned table splits within budget (D18); `Chunk(text, embed_text, metadata)`.
+  - `ingestion/parsing.py`: shared converter, cached PDF parse + heading fix, Markdown inline cleanup (`load_document()`).
+  - `scripts/show_chunks.py`, `scripts/check_headings.py`; first tests `tests/test_chunking.py` (9 passing; confirmed
+    the table test fails without the budget fix).
+  - Result: 268 chunks (194 text, 73 table, 1 code), all ≤ 256 tokens, 0 missing metadata.
+  - Diagrams: `docs/diagrams/ingestion.md` (pipeline, content layers, heading stack, table formats); ARCHITECTURE updated.
+- **Learned:**
+  - Heading stack: a level-L heading drops every entry at level ≥ L; flat levels make each heading replace the last.
+  - Tokenizer alignment: count with the embedding model's tokenizer; medical terms split into many subwords, `----` is costly.
+  - Two passes: structure first, then tokens; the limit should only bite where structure gives big units (tables).
+  - Serialisation is a retrieval decision: how a table is written decides where it can split and what gets embedded.
+  - Read the library source before overriding it; verify a guard test fails without the fix.
+  - Decision practice: profile, measure the options, choose, record (D17, D18); chunking-strategy interview answer.
+- **Open items:**
+  - Callout scope: text after a callout box (same section) inherits the callout label; not seen in this data, watch it.
+  - Day 4: check FastEmbed's bge-small ONNX tokenizer matches the HF tokenizer we counted with.
+  - Day 4: `load_document()` re-parses PDFs if `data/parsed/` is missing (~200 s); fine for `ingest.py`.
+  - Day 6: compare max_tokens 256 vs 512 on the eval set.
+  - User: enable GitHub branch protection on `main` (still open).
+- **Next:** Day 4 — embeddings + Qdrant indexing: dense (bge-small) + sparse (BM25) named vectors, payload indexes,
+  `scripts/ingest.py` loading all 268 chunks.

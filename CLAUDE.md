@@ -41,13 +41,13 @@ Hybrid RAG (dense + BM25 in Qdrant) → cross-encoder rerank → Groq LLM, plus 
 4. Suggest a commit message (don't commit unless asked).
 
 ## Current state
-- **Last completed:** Day 2 — Docling parsing inspected for all 12 files
-  (PR from `feature/day-2-docling-parsing`; check whether it's merged before branching for Day 3).
-- **Next:** Day 3 — heading levels from font size (D16), then HybridChunker + metadata. Load cached
-  `data/parsed/*.json` (`DoclingDocument.load_from_json`) instead of re-parsing (~200 s).
-- **Code written so far:** tooling + two exploration scripts (`backend/scripts/explore_docling.py`,
-  `backend/scripts/inspect_all.py`). No application code in `backend/src/medibot/` yet.
-- **Open items:** see the Day 2 entry in `docs/ROADMAP.md`.
+- **Last completed:** Day 3 — heading-level fix, HybridChunker + metadata, 268 chunks validated
+  (PR from `feature/day-3-hybridchunker-metadata`; check whether it's merged before branching for Day 4).
+- **Next:** Day 4 — embeddings (FastEmbed bge-small dense + BM25 sparse) and Qdrant indexing via `scripts/ingest.py`.
+  Entry points: `ingestion.parsing.load_document()` → `ingestion.chunking.build_chunker()` / `chunk_document()`.
+- **Code written so far:** `src/medibot/rbac.py`; `src/medibot/ingestion/{parsing,headings,chunking}.py`;
+  `tests/test_chunking.py` (9 tests); exploration scripts in `backend/scripts/`. Diagrams in `docs/diagrams/`.
+- **Open items:** see the Day 3 entry in `docs/ROADMAP.md`.
 
 ## Environment facts
 - Dataset zip (outside repo): `/home/naina/Downloads/codebasics/29-aug-session-5/Medibot_Assignment_Resources/mediassist_data.zip`

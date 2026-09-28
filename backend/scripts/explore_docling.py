@@ -11,21 +11,12 @@ import sys
 import time
 from pathlib import Path
 
-from docling.datamodel.base_models import InputFormat
-from docling.datamodel.pipeline_options import PdfPipelineOptions
-from docling.document_converter import DocumentConverter, PdfFormatOption
 from docling_core.types.doc import ContentLayer, SectionHeaderItem, TableItem
+
+from medibot.ingestion.parsing import build_converter
 
 DATA_DIR = Path(__file__).resolve().parents[2] / "data" / "mediassist_data"
 DEFAULT_FILE = DATA_DIR / "general" / "leave_policy.pdf"
-
-
-def build_converter() -> DocumentConverter:
-    # D4: all PDFs are digital, so the text layer is exact. OCR would only cost CPU time.
-    pdf_options = PdfPipelineOptions(do_ocr=False, do_table_structure=True)
-    return DocumentConverter(
-        format_options={InputFormat.PDF: PdfFormatOption(pipeline_options=pdf_options)}
-    )
 
 
 def print_tree(doc) -> None:
