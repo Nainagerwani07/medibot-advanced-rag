@@ -96,6 +96,8 @@ Add one entry at the end of each session: what was done, what we learned, what's
     the table test fails without the budget fix).
   - Result: 268 chunks (194 text, 73 table, 1 code), all ≤ 256 tokens, 0 missing metadata.
   - Diagrams: `docs/diagrams/ingestion.md` (pipeline, content layers, heading stack, table formats); ARCHITECTURE updated.
+  - Follow-up (`feature/day-3-chunks-export`): `show_chunks.py` also writes all chunks to `data/chunks.jsonl`
+    (gitignored; index, tokens, metadata, text, embed_text) for browsing and diffing chunking changes.
 - **Learned:**
   - Heading stack: a level-L heading drops every entry at level ≥ L; flat levels make each heading replace the last.
   - Tokenizer alignment: count with the embedding model's tokenizer; medical terms split into many subwords, `----` is costly.

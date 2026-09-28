@@ -5,8 +5,11 @@ Usage (from backend/):
 
 Prints per-document chunk counts by type, validates every chunk (5 metadata fields present,
 embed_text within the token limit), then prints a few hand-picked chunks in full.
+Also writes every chunk to data/chunks.jsonl (gitignored), one JSON object per line, for browsing
+and for diffing what changes when chunking settings change.
 """
 
+import json
 import statistics
 from collections import Counter
 
@@ -16,6 +19,7 @@ from medibot.ingestion.chunking import MAX_TOKENS, build_chunker, chunk_document
 from medibot.ingestion.parsing import build_converter, load_document
 
 PARSED_DIR = DATA_DIR.parent / "parsed"
+EXPORT_PATH = DATA_DIR.parent / "chunks.jsonl"
 REQUIRED = ["source_document", "collection", "access_roles", "section_title", "chunk_type"]
 
 # (source_document, substring of the chunk text) for the cases we flagged on Day 2 / Day 3
@@ -27,6 +31,20 @@ SAMPLES = [
     ("claim_submission_guide.md", "empanelled insurer listed in"),  # inline code
     ("treatment_protocols.pdf", "ICD-10: E11"),  # tiny intro-only section
 ]
+
+
+def export(chunks, token_counts) -> None:
+    with EXPORT_PATH.open("w", encoding="utf-8") as fh:
+        for i, (chunk, tokens) in enumerate(zip(chunks, token_counts, strict=True)):
+            record = {
+                "index": i,
+                "tokens": tokens,
+                "metadata": chunk.metadata,
+                "text": chunk.text,
+                "embed_text": chunk.embed_text,
+            }
+            fh.write(json.dumps(record, ensure_ascii=False) + "\n")  # keep ₹, — readable
+    print(f"  wrote {len(chunks)} chunks to {EXPORT_PATH}")
 
 
 def main() -> None:
@@ -56,6 +74,7 @@ def main() -> None:
         f" max={max(token_counts)}  over limit: {len(over)}"
     )
     print(f"  chunks missing a required field: {len(missing)}")
+    export(chunks, token_counts)
     roles = {c.metadata["collection"]: c.metadata["access_roles"] for c in chunks}
     for collection, allowed in sorted(roles.items()):
         print(f"  access_roles[{collection}] = {allowed}")
