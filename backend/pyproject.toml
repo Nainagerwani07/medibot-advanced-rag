@@ -39,6 +39,8 @@ select = ["E", "W", "F", "I", "B", "UP", "SIM", "S"]
 [tool.ruff.lint.per-file-ignores]
 # assert is how pytest works
 "tests/**" = ["S101"]
+# attack prompts are data; keeping each on one line keeps them readable and greppable
+"scripts/attack_demo.py" = ["E501"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

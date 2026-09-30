@@ -16,9 +16,9 @@ Status legend: ⬜ not started · 🟡 in progress · ✅ done
 | 6 | ✅ | Eval set + cross-encoder rerank | Bi- vs cross-encoder; hit@k, MRR | Table comparing dense-only / hybrid / hybrid+rerank; reranker scores logged | R3.5, R4 |
 | 7 | ✅ | Grounded generation + SQL RAG | Grounded prompts, citations, text-to-SQL pitfalls, read-only execution | Answers with citations; `sql_rag_chain` correct on ≥4 questions | R3.4, R5 |
 | 8 | ✅ | Router + FastAPI + JWT | Server-side authorization, dependency injection | All 4 endpoints work with curl; role taken from token | R1.4, R6 |
-| 9 | ⬜ | Adversarial RBAC testing | Prompt injection vs retrieval-layer security | ≥3 documented attacks + pytest suite passing | R1.2, R1.3, NF4 |
-| 10 | ⬜ | Next.js UI | — | Login, role badge, collections, citations, retrieval label, refusal message | R7 |
-| 11 | ⬜ | README polish, diagram, screenshots, submit | — | Public repo link submitted | R8 |
+| 9 | ✅ | Adversarial RBAC testing | Prompt injection vs retrieval-layer security | ≥3 documented attacks + pytest suite passing | R1.2, R1.3, NF4 |
+| 10 | ✅ | Next.js UI | — | Login, role badge, collections, citations, retrieval label, refusal message | R7 |
+| 11 | ✅ | README polish, diagram, screenshots, submit | — | Public repo link submitted | R8 |
 
 ## Session log
 
@@ -209,3 +209,27 @@ Add one entry at the end of each session: what was done, what we learned, what's
   - `sql_rag` error text shows the SQLite error to the user; fine for a demo, trim for production.
   - Carried over: `leave_policy.pdf` "Important" section_title; branch protection on `main`.
 - **Next:** Day 9 — adversarial RBAC testing write-up, then Day 10 Next.js UI.
+
+### Days 9–11 — 2026-10-01 (combined, deadline)
+- **Done:**
+  - Branch `feature/day-9-11-adversarial-ui-readme` (stacked on `feature/day-6-8-rerank-generation-api`, PR #7).
+  - **Day 9:** `scripts/attack_demo.py`: 8 attacks via the live API (injection, role claim, body role, disguised
+    question, mixed, SQL without access, `DROP TABLE`, role-play). 8/8 held; the router-skipped pass into Qdrant shows
+    no out-of-role collection in any top-10. Output: `docs/ADVERSARIAL_RUN.md`.
+  - **Day 10:** `frontend/` Next.js 15: login with demo-account buttons, role badge, collections sidebar (locked
+    ones shown, plus SQL access), retrieval-type label, citation chips (SQL shown for SQL RAG), styled refusal
+    (`blocked`), responsive layout, safe Markdown rendering. Lint + build clean.
+  - Screenshots (headless Chrome, puppeteer-core outside the repo): `docs/screenshots/01–10`.
+  - **Day 11:** README rewritten: architecture diagram, roles + demo logins, eval table, 6 documented attacks with
+    screenshots, setup for ingest/backend/frontend, API table, tool substitutions. D28, D29.
+  - `.gitignore`: the Python template's `lib/` rule would have dropped `frontend/lib/api.ts`; re-included.
+- **Learned:**
+  - In the live run the router refuses first, so a passing attack doesn't prove the filter works; the
+    router-skipped pass does.
+  - Checking answers for canary strings catches leaks that a sources-only check would miss.
+  - UI hiding is cosmetic; the badge and collections come from the server, and the API enforces.
+- **Open items:**
+  - Merge PR #7, then this PR. Submit the public repo link (R8).
+  - Chunk size 256 vs 512 still not evaluated; `leave_policy.pdf` "Important" section_title; branch protection.
+  - Optional: prompt-guard model as an extra detection layer; frontend e2e test in CI.
+- **Next:** project complete. Only submission and follow-ups remain.

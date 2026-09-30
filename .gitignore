@@ -228,3 +228,5 @@ node_modules/
 .next/
 # Model caches
 .cache/
+# the Python template above ignores lib/; the frontend's lib/ is source code
+!frontend/lib/
