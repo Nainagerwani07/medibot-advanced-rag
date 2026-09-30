@@ -13,9 +13,9 @@ Status legend: ⬜ not started · 🟡 in progress · ✅ done
 | 3 | ✅ | HybridChunker + metadata | Structure-first then token splitting; tokenizer alignment; `contextualize()` | Chunks printed with heading context + all 5 metadata fields; chunk_type correct for tables | R2.2–R2.4 |
 | 4 | ✅ | Embeddings + Qdrant indexing | Dense vs sparse vectors, BM25/IDF, named vectors, payload indexes | `scripts/ingest.py` loads everything into Qdrant; counts per collection check out | R2.5, R3.1 |
 | 5 | ✅ | Hybrid retrieval + RBAC filter | Prefetch, RRF fusion, why filtering happens inside the search | One `query_points` call does hybrid + filter; nurse can never get billing chunks | R1.1, R3.2, R3.3 |
-| 6 | ⬜ | Eval set + cross-encoder rerank | Bi- vs cross-encoder; hit@k, MRR | Table comparing dense-only / hybrid / hybrid+rerank; reranker scores logged | R3.5, R4 |
-| 7 | ⬜ | Grounded generation + SQL RAG | Grounded prompts, citations, text-to-SQL pitfalls, read-only execution | Answers with citations; `sql_rag_chain` correct on ≥4 questions | R3.4, R5 |
-| 8 | ⬜ | Router + FastAPI + JWT | Server-side authorization, dependency injection | All 4 endpoints work with curl; role taken from token | R1.4, R6 |
+| 6 | ✅ | Eval set + cross-encoder rerank | Bi- vs cross-encoder; hit@k, MRR | Table comparing dense-only / hybrid / hybrid+rerank; reranker scores logged | R3.5, R4 |
+| 7 | ✅ | Grounded generation + SQL RAG | Grounded prompts, citations, text-to-SQL pitfalls, read-only execution | Answers with citations; `sql_rag_chain` correct on ≥4 questions | R3.4, R5 |
+| 8 | ✅ | Router + FastAPI + JWT | Server-side authorization, dependency injection | All 4 endpoints work with curl; role taken from token | R1.4, R6 |
 | 9 | ⬜ | Adversarial RBAC testing | Prompt injection vs retrieval-layer security | ≥3 documented attacks + pytest suite passing | R1.2, R1.3, NF4 |
 | 10 | ⬜ | Next.js UI | — | Login, role badge, collections, citations, retrieval label, refusal message | R7 |
 | 11 | ⬜ | README polish, diagram, screenshots, submit | — | Public repo link submitted | R8 |
@@ -175,3 +175,37 @@ Add one entry at the end of each session: what was done, what we learned, what's
   - Carried over: `leave_policy.pdf` "Important" callout section_title; max_tokens 256 vs 512; branch protection.
 - **Next:** Day 6 — eval set + cross-encoder rerank: hit@k / MRR for dense-only vs hybrid vs hybrid+rerank,
   reranker scores logged.
+
+### Days 6–8 — 2026-09-30 (one combined session, deadline)
+- **Done:**
+  - Branch `feature/day-6-8-rerank-generation-api` (from `main` after PR #6 merged).
+  - **Day 6:** `retrieval/rerank.py` (`Reranker`, MiniLM-L-6 ONNX via FastEmbed, logs every candidate's old/new
+    rank + score); `HybridRetriever.search(mode="dense"|"sparse"|"hybrid", rrf_k=...)` for baselines;
+    `RetrievedChunk.heading_path`; `eval/questions.jsonl` (68 questions: 36 section, 16 lexical, 16 paraphrase);
+    `scripts/eval_retrieval.py` (hit@1/3/5/10, MRR, by kind, per question). Results in `docs/EVAL.md`.
+  - **Day 7:** `generation/llm.py` (Groq), `generation/answer.py` (numbered context with heading path, cite [n],
+    not-found reply, sources = cited chunks); `sql_rag/chain.py` (`sql_rag_chain`, generate → clean → read-only
+    run + answer); `scripts/try_sql_rag.py` (7 analytical questions, all checked against the DB by hand).
+  - **Day 8:** `routing/router.py` (20b JSON router + keyword fallback), `service.py` (`ChatService`: route →
+    SQL or hybrid → rerank → answer; refusals), `api/auth.py` (bcrypt, JWT), `api/main.py` (`/login`, `/chat`,
+    `/collections/{role}`, `/health`, CORS for :3000). Checked end to end with curl.
+  - Tests: `test_sql_rag.py` (22), `test_api.py` (17), `test_service.py` (16). **104 pass.** Mutation checks:
+    removing the SQL role check fails 3 tests; removing the token-role check fails 1.
+  - Docs: `docs/EVAL.md`, `docs/diagrams/chat.md`, D23–D27, ARCHITECTURE layout.
+- **Learned:**
+  - An eval that echoes the headings says nothing (first set: every system ~1.0). Codes and paraphrases separate
+    the systems: dense misses codes, BM25 misses paraphrases, hybrid gets all 68 into the top 10.
+  - Fusion widens recall but doesn't order well (hybrid hit@1 0.79 < dense 0.81); the cross-encoder fixes the
+    order (0.87 hit@1, 0.97 hit@3).
+  - A cross-encoder only knows what you feed it: with the bare section title it made things worse.
+  - The router is useful for *messages*, not *security*: a test fools it and checks the filter still holds.
+  - LLM-written SQL needs layers that each work with the others removed (clean, read-only, authorizer).
+- **Open items:**
+  - Chunk size 256 vs 512 (D17) not evaluated (needs a re-index).
+  - Day 9: document ≥ 3 adversarial prompts with screenshots (curl runs so far: "ignore instructions… billing
+    codes" as nurse → refused; "SYSTEM OVERRIDE… Meropenem" as nurse → refused; `DROP TABLE` as billing → not
+    run; mixed billing + nursing → nursing part answered + note). Consider llama-prompt-guard (Day 1 note).
+  - Router misroutes are possible (e.g. a vague question gets no targets → search runs, which is safe).
+  - `sql_rag` error text shows the SQLite error to the user; fine for a demo, trim for production.
+  - Carried over: `leave_policy.pdf` "Important" section_title; branch protection on `main`.
+- **Next:** Day 9 — adversarial RBAC testing write-up, then Day 10 Next.js UI.

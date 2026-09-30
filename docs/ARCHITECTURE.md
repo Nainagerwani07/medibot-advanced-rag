@@ -94,7 +94,8 @@ unknown role raises instead of searching unfiltered.
 - **Why write it with qdrant-client instead of LangChain**: the filter placement is visible and easy to audit, and it's a learning goal.
 
 ### 2.4 Reranker
-- `cross-encoder/ms-marco-MiniLM-L-6-v2` (default: small and fast on CPU). `BAAI/bge-reranker-base` can be compared in the eval.
+- `ms-marco-MiniLM-L-6-v2` as ONNX via FastEmbed `TextCrossEncoder` (D23); it scores `heading path + text`.
+  L-12 and `bge-reranker-base` were compared and not worth their latency ([EVAL.md](EVAL.md)).
 - A bi-encoder embeds the query and the chunk *separately*. A cross-encoder reads them *together*, so it's more accurate but too slow to run over the whole index. That's why we use it only on the top 10 to get the top 3.
 
 ### 2.5 SQL RAG (`backend/src/medibot/sql_rag/`)
@@ -110,7 +111,8 @@ The LLM returns JSON: `{"type": "analytical" | "document", "target_collections":
 - If the LLM output can't be parsed, a keyword heuristic is used instead.
 
 ### 2.7 API & auth (`backend/src/medibot/api/`)
-- FastAPI, with demo users in a config file (bcrypt-hashed passwords) and a JWT holding `sub` and `role`.
+- FastAPI, with the demo users' bcrypt hashes in `api/auth.py` and a JWT holding `sub` and `role` (D25).
+  Request flow: [diagrams/chat.md](diagrams/chat.md).
 - `/chat` reads the role from the token through a dependency. If the request body includes a role, it is ignored or checked against the token's role.
 
 ### 2.8 Frontend (`frontend/`)
@@ -137,8 +139,8 @@ The principle: **the LLM can't leak what it never saw.** Prompt injection can ch
 | Dense embeddings | `BAAI/bge-small-en-v1.5` via FastEmbed (ONNX, CPU friendly) |
 | Sparse embeddings | FastEmbed `Qdrant/bm25` |
 | Vector DB | Qdrant (Docker), `qdrant-client` |
-| Reranker | `cross-encoder/ms-marco-MiniLM-L-6-v2` (sentence-transformers) |
-| LLM | Groq API: `openai/gpt-oss-120b` (answers) / `openai/gpt-oss-20b` (router, NL→SQL), final pick Day 7 (D1) |
+| Reranker | `Xenova/ms-marco-MiniLM-L-6-v2` (FastEmbed ONNX, D23) |
+| LLM | Groq API: `openai/gpt-oss-120b` (answers) / `openai/gpt-oss-20b` (router, NL→SQL) (D1, D24) |
 | SQL | SQLite (`mediassist.db`) |
 | Backend | FastAPI, Pydantic, PyJWT |
 | Frontend | Next.js |
@@ -164,13 +166,14 @@ medibot-advanced-rag/
 │   │   ├── config.py         # settings from .env                        (planned)
 │   │   ├── rbac.py           # single source of truth: role → collections
 │   │   ├── ingestion/        # parsing.py, headings.py, chunking.py, indexing.py
-│   │   ├── retrieval/        # hybrid.py (hybrid search + RBAC filter); reranker (planned)
-│   │   ├── sql_rag/          # sql_rag_chain                             (planned)
-│   │   ├── routing/          # analytical vs document, target collection (planned)
-│   │   ├── generation/       # prompts, LLM client, citations            (planned)
-│   │   └── api/              # FastAPI app, auth, endpoints              (planned)
+│   │   ├── retrieval/        # hybrid.py (hybrid search + RBAC filter), rerank.py (cross-encoder)
+│   │   ├── sql_rag/          # chain.py: sql_rag_chain (generate, clean, read-only run + answer)
+│   │   ├── routing/          # router.py: analytical vs document, target collections
+│   │   ├── generation/       # llm.py (Groq), answer.py (grounded prompt, citations)
+│   │   ├── service.py        # ChatService: route → SQL or hybrid+rerank → answer, refusals
+│   │   └── api/              # main.py (FastAPI endpoints), auth.py (bcrypt + JWT)
 │   ├── scripts/              # explore/inspect/profile/show_chunks (Day 2-3); ingest.py, explore_embeddings.py (Day 4); explore_retrieval.py (Day 5)
-│   ├── eval/                 # questions.json, compare.py                (planned)
+│   ├── eval/                 # questions.jsonl (run scripts/eval_retrieval.py; results in docs/EVAL.md)
 │   └── tests/                # RBAC adversarial tests, unit tests
 ├── frontend/                 # Next.js                                   (planned)
 └── data/                     # dataset (gitignored), see README for how to get it
