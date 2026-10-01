@@ -41,19 +41,22 @@ Hybrid RAG (dense + BM25 in Qdrant) → cross-encoder rerank → Groq LLM, plus 
 4. Suggest a commit message (don't commit unless asked).
 
 ## Current state
-- **Last completed:** Day 5 — hybrid retrieval + RBAC: `HybridRetriever.search(query, role, k=10)` does one
-  `query_points` call (dense + BM25 prefetch, RRF k=2) with the two-part role filter on every stage (D21, D22);
-  35 RBAC/retrieval tests (PR from `feature/day-5-hybrid-retrieval-rbac`; check whether it's merged before
-  branching for Day 6).
-- **Next:** Day 6 — eval set + cross-encoder rerank (R3.5, R4, NF5): questions with expected sources, hit@k / MRR
-  for dense-only vs hybrid vs hybrid+rerank (MiniLM-L-6, top-10 → top-3), reranker scores logged; also try RRF
-  k=60 and max_tokens 256 vs 512. Entry points: `retrieval.hybrid.HybridRetriever`, `RetrievedChunk`, `role_filter`.
-- **Code written so far:** `src/medibot/rbac.py`; `src/medibot/ingestion/{parsing,headings,chunking,indexing}.py`;
-  `src/medibot/retrieval/hybrid.py`; `scripts/ingest.py` (rebuild + verify); tests: `test_chunking.py` (9),
-  `test_indexing.py` (5), `test_retrieval.py` (35); exploration scripts in `backend/scripts/`
-  (`explore_retrieval.py` = Day 5). Diagrams in `docs/diagrams/`.
-  Re-index with `uv run python scripts/ingest.py` from `backend/` (Qdrant must be up).
-- **Open items:** see the Day 5 entry in `docs/ROADMAP.md`.
+- **Last completed:** Days 6–8 in one session (branch `feature/day-6-8-rerank-generation-api`; check whether its
+  PR is merged before branching for Day 9).
+  - Day 6: `retrieval/rerank.py` (MiniLM-L-6 ONNX, heading path + text, D23); eval set of 68 questions +
+    `scripts/eval_retrieval.py`; results in `docs/EVAL.md` (hybrid+rerank MRR 0.921 vs dense 0.868).
+  - Day 7: `generation/{llm,answer}.py` (Groq gpt-oss, grounded + cited, D24); `sql_rag/chain.py`
+    (`sql_rag_chain`, 3-layer read-only safety, D27).
+  - Day 8: `routing/router.py`, `service.py` (`ChatService`, refusal rules D26), `api/{auth,main}.py` (JWT D25).
+- **Next:** Day 9 — adversarial RBAC write-up (≥3 attacks with screenshots, R1.2/R1.3/R1.5) on top of the
+  existing tests; then Day 10 Next.js UI (response has `blocked` for styling refusals).
+- **Code written so far:** `src/medibot/{rbac,service}.py`; `ingestion/{parsing,headings,chunking,indexing}.py`;
+  `retrieval/{hybrid,rerank}.py`; `generation/{llm,answer}.py`; `sql_rag/chain.py`; `routing/router.py`;
+  `api/{auth,main}.py`. Scripts: `ingest.py`, `eval_retrieval.py`, `try_sql_rag.py`, explore_* (Days 2–5).
+  Tests (104): chunking 9, indexing 5, retrieval 35, sql_rag 22, api 17, service 16.
+  Re-index: `uv run python scripts/ingest.py`. API: `set -a; . ../.env; set +a; uv run uvicorn medibot.api.main:app --port 8000`
+  (both from `backend/`, Qdrant up).
+- **Open items:** see the Days 6–8 entry in `docs/ROADMAP.md`.
 
 ## Environment facts
 - Dataset zip (outside repo): `/home/naina/Downloads/codebasics/29-aug-session-5/Medibot_Assignment_Resources/mediassist_data.zip`
