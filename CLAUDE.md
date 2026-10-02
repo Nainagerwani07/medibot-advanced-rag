@@ -41,22 +41,18 @@ Hybrid RAG (dense + BM25 in Qdrant) → cross-encoder rerank → Groq LLM, plus 
 4. Suggest a commit message (don't commit unless asked).
 
 ## Current state
-- **Last completed:** Days 6–8 in one session (branch `feature/day-6-8-rerank-generation-api`; check whether its
-  PR is merged before branching for Day 9).
-  - Day 6: `retrieval/rerank.py` (MiniLM-L-6 ONNX, heading path + text, D23); eval set of 68 questions +
-    `scripts/eval_retrieval.py`; results in `docs/EVAL.md` (hybrid+rerank MRR 0.921 vs dense 0.868).
-  - Day 7: `generation/{llm,answer}.py` (Groq gpt-oss, grounded + cited, D24); `sql_rag/chain.py`
-    (`sql_rag_chain`, 3-layer read-only safety, D27).
-  - Day 8: `routing/router.py`, `service.py` (`ChatService`, refusal rules D26), `api/{auth,main}.py` (JWT D25).
-- **Next:** Day 9 — adversarial RBAC write-up (≥3 attacks with screenshots, R1.2/R1.3/R1.5) on top of the
-  existing tests; then Day 10 Next.js UI (response has `blocked` for styling refusals).
-- **Code written so far:** `src/medibot/{rbac,service}.py`; `ingestion/{parsing,headings,chunking,indexing}.py`;
-  `retrieval/{hybrid,rerank}.py`; `generation/{llm,answer}.py`; `sql_rag/chain.py`; `routing/router.py`;
-  `api/{auth,main}.py`. Scripts: `ingest.py`, `eval_retrieval.py`, `try_sql_rag.py`, explore_* (Days 2–5).
-  Tests (104): chunking 9, indexing 5, retrieval 35, sql_rag 22, api 17, service 16.
-  Re-index: `uv run python scripts/ingest.py`. API: `set -a; . ../.env; set +a; uv run uvicorn medibot.api.main:app --port 8000`
-  (both from `backend/`, Qdrant up).
-- **Open items:** see the Days 6–8 entry in `docs/ROADMAP.md`.
+- **Last completed:** all Days 0–11. Days 6–8 on PR #7 (`feature/day-6-8-rerank-generation-api`); Days 9–11 on
+  `feature/day-9-11-adversarial-ui-readme`, stacked on it (merge #7 first).
+  - Day 9: `scripts/attack_demo.py` → `docs/ADVERSARIAL_RUN.md` (8/8 held, router-skipped pass too, D28).
+  - Day 10: `frontend/` Next.js 15 (D29); screenshots in `docs/screenshots/`.
+  - Day 11: README complete (diagram, eval, attacks + screenshots, setup, substitutions).
+- **Next:** submission (public repo link) and optional follow-ups in the ROADMAP's last entry.
+- **Code:** backend `src/medibot/{rbac,service}.py`, `ingestion/`, `retrieval/{hybrid,rerank}.py`,
+  `generation/{llm,answer}.py`, `sql_rag/chain.py`, `routing/router.py`, `api/{auth,main}.py`; scripts `ingest.py`,
+  `eval_retrieval.py`, `try_sql_rag.py`, `attack_demo.py`; 104 tests. Frontend `frontend/{app,components,lib}`.
+  Run: Qdrant up → `cd backend && set -a; . ../.env; set +a; uv run uvicorn medibot.api.main:app --port 8000`
+  → `cd frontend && npm run build && npm start` → http://localhost:3000.
+- **Open items:** see the Days 9–11 entry in `docs/ROADMAP.md`.
 
 ## Environment facts
 - Dataset zip (outside repo): `/home/naina/Downloads/codebasics/29-aug-session-5/Medibot_Assignment_Resources/mediassist_data.zip`
