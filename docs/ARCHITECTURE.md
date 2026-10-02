@@ -116,7 +116,10 @@ The LLM returns JSON: `{"type": "analytical" | "document", "target_collections":
 - `/chat` reads the role from the token through a dependency. If the request body includes a role, it is ignored or checked against the token's role.
 
 ### 2.8 Frontend (`frontend/`)
-Next.js (App Router): a login page and a chat page with a role badge, a sidebar listing accessible collections, citation chips, a retrieval-type label and a styled refusal message.
+Next.js 15 (App Router), one client page (D29): login with the 5 demo accounts, then chat with a role badge, a
+sidebar listing all collections (the role's open, the rest locked) and SQL access, a retrieval-type label per
+answer, citation chips (the SQL itself for SQL RAG) and a styled refusal when `blocked` is true. Code:
+`app/page.tsx`, `components/{Login,Chat,Markdown}.tsx`, `lib/api.ts`. Screenshots in `docs/screenshots/`.
 
 ## 3. Security model: defence in depth
 
@@ -148,8 +151,6 @@ The principle: **the LLM can't leak what it never saw.** Prompt injection can ch
 
 ## 5. Repo layout
 
-Items marked *(planned)* don't exist yet.
-
 ```
 medibot-advanced-rag/
 ├── CLAUDE.md                 # context for Claude Code sessions
@@ -163,7 +164,6 @@ medibot-advanced-rag/
 ├── .claude/                  # Claude Code hooks + /start-session, /end-session skills
 ├── backend/                  # uv project (pyproject.toml, uv.lock)
 │   ├── src/medibot/
-│   │   ├── config.py         # settings from .env                        (planned)
 │   │   ├── rbac.py           # single source of truth: role → collections
 │   │   ├── ingestion/        # parsing.py, headings.py, chunking.py, indexing.py
 │   │   ├── retrieval/        # hybrid.py (hybrid search + RBAC filter), rerank.py (cross-encoder)
@@ -175,6 +175,6 @@ medibot-advanced-rag/
 │   ├── scripts/              # explore/inspect/profile/show_chunks (Day 2-3); ingest.py, explore_embeddings.py (Day 4); explore_retrieval.py (Day 5)
 │   ├── eval/                 # questions.jsonl (run scripts/eval_retrieval.py; results in docs/EVAL.md)
 │   └── tests/                # RBAC adversarial tests, unit tests
-├── frontend/                 # Next.js                                   (planned)
+├── frontend/                 # Next.js 15: app/page.tsx, components/, lib/api.ts
 └── data/                     # dataset (gitignored), see README for how to get it
 ```
