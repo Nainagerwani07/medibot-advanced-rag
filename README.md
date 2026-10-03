@@ -30,11 +30,10 @@ flowchart TD
     R -->|analytical| S1{"role ∈ billing_executive, admin?"}
     S1 -->|no| X["RBAC refusal"]
     S1 -->|yes| SQL["SQL RAG<br/>NL→SQL · clean · read-only SQLite · answer"]
-    R -->|document| P{"any target collection allowed?"}
-    P -->|no| X
-    P -->|yes| H["Qdrant: dense + BM25 prefetch, RRF fusion<br/>filter: access_roles ∋ role AND collection ∈ role's<br/>(on every stage) → top-10"]
+    R -->|document| H["Qdrant: dense + BM25 prefetch, RRF fusion<br/>filter: access_roles ∋ role AND collection ∈ role's<br/>(on every stage) → top-10"]
     H --> RR["Cross-encoder rerank (MiniLM-L-6) → top-3<br/>scores logged"]
     RR --> LLM["Groq gpt-oss-120b<br/>grounded answer with [n] citations"]
+    LLM -->|"not in allowed docs + router flagged a blocked collection"| X
     SQL --> OUT["{answer, sources, retrieval_type, role, blocked}"]
     LLM --> OUT
     X --> OUT

@@ -35,9 +35,7 @@ flowchart TD
     RT -->|analytical| S1{role in billing_executive, admin?}
     S1 -->|no| X[RBAC refusal]
     S1 -->|yes| SQL[sql_rag_chain<br/>1 NL to SQL, 2 clean, 3 execute + answer]
-    RT -->|document| P{target collection allowed?}
-    P -->|no| X
-    P -->|yes| H["Qdrant query: prefetch dense + sparse<br/>filter access_roles contains role<br/>RRF fusion, top-10"]
+    RT -->|document| H["Qdrant query: prefetch dense + sparse<br/>filter access_roles contains role<br/>RRF fusion, top-10"]
     H --> RR[Cross-encoder rerank, top-3, scores logged]
     RR --> LLM[Groq LLM: grounded answer + citations]
     SQL --> OUT["answer, sources, retrieval_type, role"]

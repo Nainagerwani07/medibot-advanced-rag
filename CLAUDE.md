@@ -41,15 +41,15 @@ Hybrid RAG (dense + BM25 in Qdrant) → cross-encoder rerank → Groq LLM, plus 
 4. Suggest a commit message (don't commit unless asked).
 
 ## Current state
-- **Last completed:** all Days 0–11. Days 6–8 on PR #7 (`feature/day-6-8-rerank-generation-api`); Days 9–11 on
-  `feature/day-9-11-adversarial-ui-readme`, stacked on it (merge #7 first).
+- **Last completed:** all Days 0–11, merged to `main` (PRs #7–#9). Then fix D30 on `fix/router-false-refusal`
+  (router guess no longer skips the search); PR from that branch, merge before submitting.
   - Day 9: `scripts/attack_demo.py` → `docs/ADVERSARIAL_RUN.md` (8/8 held, router-skipped pass too, D28).
   - Day 10: `frontend/` Next.js 15 (D29); screenshots in `docs/screenshots/`.
   - Day 11: README complete (diagram, eval, attacks + screenshots, setup, substitutions).
 - **Next:** submission (public repo link) and optional follow-ups in the ROADMAP's last entry.
 - **Code:** backend `src/medibot/{rbac,service}.py`, `ingestion/`, `retrieval/{hybrid,rerank}.py`,
   `generation/{llm,answer}.py`, `sql_rag/chain.py`, `routing/router.py`, `api/{auth,main}.py`; scripts `ingest.py`,
-  `eval_retrieval.py`, `try_sql_rag.py`, `attack_demo.py`; 104 tests. Frontend `frontend/{app,components,lib}`.
+  `eval_retrieval.py`, `try_sql_rag.py`, `attack_demo.py`; 105 tests. Frontend `frontend/{app,components,lib}`.
   Run: Qdrant up → `cd backend && set -a; . ../.env; set +a; uv run uvicorn medibot.api.main:app --port 8000`
   → `cd frontend && npm run build && npm start` → http://localhost:3000.
 - **Open items:** see the Days 9–11 entry in `docs/ROADMAP.md`.

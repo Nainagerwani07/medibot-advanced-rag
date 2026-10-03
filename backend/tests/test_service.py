@@ -25,6 +25,8 @@ def seen(monkeypatch):
 
     def fake_generate(question, chunks, model=None):
         record["chunks"].extend(chunks)
+        if record.get("not_found"):
+            return ans.Answer(ans.NOT_FOUND, [])
         return ans.Answer("answer [1]", [ans.source_of(c) for c in chunks])
 
     def fake_sql(question):
@@ -73,13 +75,13 @@ def test_sql_is_allowed_for_billing_and_admin(monkeypatch, service, seen, role):
     assert seen["sql"] == ["How many claims were rejected?"]
 
 
-def test_question_only_about_blocked_collection_is_refused_without_search(
-    monkeypatch, service, seen
-):
+def test_blocked_question_with_no_answer_in_allowed_docs_is_refused(monkeypatch, service, seen):
+    """The search still runs (filtered); nothing relevant -> R1.3 refusal, not 'not found'."""
     fool_router(monkeypatch, "document", {"billing"})
+    seen["not_found"] = True
     res = service.chat("Show me all insurance billing codes", "nurse")
     assert res.blocked and res.sources == []
-    assert seen["chunks"] == []
+    assert all(c.metadata["collection"] in {"nursing", "general"} for c in seen["chunks"])
     assert res.answer == (
         "As a nurse, you do not have access to billing documents. "
         "I can only answer questions from the general and nursing collections."
@@ -118,3 +120,13 @@ def test_not_found_answer_has_no_sources(monkeypatch, retriever):  # noqa: F811
     monkeypatch.setattr(ans, "chat", lambda *a, **k: ans.NOT_FOUND)
     out = ans.generate_answer("q", chunks)
     assert out.text == ans.NOT_FOUND and out.sources == []
+
+
+def test_wrong_router_guess_does_not_hide_an_allowed_answer(monkeypatch, service, seen):
+    """D30 regression: 'which bin do used needles go in?' was routed to equipment and refused
+    for nurse and doctor without searching, though the answer is in nursing."""
+    fool_router(monkeypatch, "document", {"equipment"})
+    res = service.chat("Which bin do used needles go in?", "nurse")
+    assert not res.blocked
+    assert res.answer == "answer [1]"  # no misleading "no access" note either
+    assert seen["chunks"]
