@@ -91,19 +91,19 @@ class ChatService:
             }
             return ChatResult(res.answer, [src], "sql_rag", role, debug={"sql": res.sql})
 
+        # Always search (D30). The router's guess only words the refusal; it never skips the
+        # search, because a wrong guess ("needles" -> equipment) would hide an allowed answer.
         blocked = r.target_collections - allowed
-        if r.target_collections and not (r.target_collections & allowed):
-            # every collection the question is about is off-limits: refuse without searching
-            return ChatResult(refusal(role, blocked), [], "hybrid_rag", role, blocked=True)
-
         candidates = self.retriever.search(question, role)  # role filter inside Qdrant (R1.1)
         top = self.reranker.rerank(question, candidates)  # top-10 -> top-3, scores logged (R4)
         ans = generate_answer(question, top)
         if ans.text == NOT_FOUND and blocked:
-            # nothing in the allowed docs, and part of the question targets a blocked collection
+            # the allowed docs don't answer it, and it looks aimed at a blocked collection
             return ChatResult(refusal(role, blocked), [], "hybrid_rag", role, blocked=True)
         text = ans.text
-        if blocked:  # answered the allowed part; say why the rest is missing
+        if blocked and r.target_collections & allowed:
+            # mixed question: answered the allowed part; say why the rest is missing.
+            # (All targets blocked but an answer found = the router guessed wrong; no note.)
             text += f"\n\nNote: {refusal(role, blocked)}"
         scores = [(c.metadata["source_document"], round(c.score, 3)) for c in top]
         return ChatResult(text, ans.sources, "hybrid_rag", role, debug={"rerank": scores})

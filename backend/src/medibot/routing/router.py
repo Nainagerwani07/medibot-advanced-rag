@@ -37,16 +37,19 @@ type:
 target_collections: which document collections the question is about (any of):
 - general: HR, leave, salary, code of conduct, staff FAQs, campuses, emergency codes
 - clinical: treatment protocols, drug formulary, doses, lab reference ranges, diagnosis
-- nursing: ICU nursing procedures, infection control, hand hygiene, PPE
+- nursing: ICU nursing procedures, infection control, hand hygiene, PPE, isolation precautions,
+  waste segregation and bin colours, sharps and needlestick injuries, outbreaks
 - billing: billing/ICD codes, package rates, insurers, claims process, pre-authorisation
-- equipment: equipment manuals, fault codes, maintenance, calibration
+- equipment: medical device manuals (monitors, infusion pumps, autoclave, x-ray), device fault
+  codes, device maintenance and calibration
 For analytical questions use billing for claims and equipment for maintenance tickets."""
 
 _KEYWORDS = {
     "billing": r"billing|insur|claim|icd|package rate|pre-?auth|tpa|co-?pay|reimburs|excl-\d",
     "clinical": r"dose|dosage|drug|formulary|protocol|diagnos|treatment|mg\b|lab |haemoglobin|"
     r"troponin|antibiotic|metformin",
-    "nursing": r"nurs|icu|ventilat|cannula|dressing|hand hygiene|ppe|infection|restrain",
+    "nursing": r"nurs|icu|ventilat|cannula|dressing|hand hygiene|ppe|infection|restrain|"
+    r"needle|sharps|waste|bin\b",
     "equipment": r"equipment|fault code|monitor|infusion pump|autoclave|steril|x-?ray|"
     r"calibrat|maintenance",
     "general": r"leave|salary|holiday|payslip|conduct|handbook|resign|notice period|hr\b",

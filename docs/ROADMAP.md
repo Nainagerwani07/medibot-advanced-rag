@@ -233,3 +233,13 @@ Add one entry at the end of each session: what was done, what we learned, what's
   - Chunk size 256 vs 512 still not evaluated; `leave_policy.pdf` "Important" section_title; branch protection.
   - Optional: prompt-guard model as an extra detection layer; frontend e2e test in CI.
 - **Next:** project complete. Only submission and follow-ups remain.
+
+### Fix — 2026-10-02: router false refusal (D30)
+- **Done:** branch `fix/router-false-refusal` (from `main` after PRs #7–#9 merged). "Which bin do used needles go in?"
+  was refused for nurse and doctor: the router said `equipment`, and D26 refused without searching. Now the
+  filtered search always runs; refusal only when the allowed docs don't answer and a blocked collection was flagged.
+  Router prompt clarified (waste/sharps → nursing, devices → equipment). Regression test (105 pass); attack run 8/8.
+  Diagrams (README, ARCHITECTURE, chat.md) updated.
+- **Learned:** an LLM guess in front of the search is an availability risk even when it isn't a security risk.
+  Let the guess shape the message, never what is searched.
+- **Next:** user review; walkthrough of the architecture.
